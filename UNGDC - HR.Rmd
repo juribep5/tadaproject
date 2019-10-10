@@ -7,10 +7,9 @@ output: html_document
 
 ```{r setup, include=FALSE}
 library(zip)
-
+library(readtext)
 
 ```
-
 
 ### PTS and UNGDC data
 
@@ -23,14 +22,10 @@ download.file(urlungdc, paste0(temp, '/PZUURT.zip'),
               exdir = temp)
 unzip(paste0(temp, '/PZUURT.zip'), exdir = temp)
 
-root_folder <- paste0(temp,'/Converted sessions/')
-
-filelist <- list.files(path = root_folder, pattern = '*.txt', recursive = TRUE)
-filenames <- basename(filelist)
-ungdc_files <- data.frame(t(sapply(strsplit(filenames, '_'), 
-                 function(x) c(x[1], x[2], substr(x[3], 1, 4)))))
-colnames(ungdc_files) <- c('country', 'number', 'year')
-ungdc_files$text <- sapply(paste0(root_folder, filelist), function(x) readChar(x, file.info(x)$size))
+ungd_files <- readtext(paste0(temp, "/Converted sessions/*"), 
+                                 docvarsfrom = "filenames", 
+                                 dvsep="_", 
+                                 docvarnames = c("Country", "Session", "Year"))
 
 load(url("http://www.politicalterrorscale.org/Data/Files/PTS-2019.RData"))
 
