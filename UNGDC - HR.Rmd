@@ -1,0 +1,44 @@
+---
+title: "UNGDC"
+author: "JGUP"
+date: "10/10/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(zip)
+
+
+```
+
+
+### PTS and UNGDC data
+
+```{r}
+
+dir.create(temp <- tempfile())
+
+urlungdc<-'https://dataverse.harvard.edu/api/access/datafile/:persistentId?persistentId=doi:10.7910/DVN/0TJX8Y/PZUURT'
+download.file(urlungdc, paste0(temp, '/PZUURT.zip'), 
+              exdir = temp)
+unzip(paste0(temp, '/PZUURT.zip'), exdir = temp)
+
+root_folder <- paste0(temp,'/Converted sessions/')
+
+filelist <- list.files(path = root_folder, pattern = '*.txt', recursive = TRUE)
+filenames <- basename(filelist)
+ungdc_files <- data.frame(t(sapply(strsplit(filenames, '_'), 
+                 function(x) c(x[1], x[2], substr(x[3], 1, 4)))))
+colnames(ungdc_files) <- c('country', 'number', 'year')
+ungdc_files$text <- sapply(paste0(root_folder, filelist), function(x) readChar(x, file.info(x)$size))
+
+load(url("http://www.politicalterrorscale.org/Data/Files/PTS-2019.RData"))
+
+unlink(temp)
+rm(temp)
+rm(filelist)
+rm(filenames)
+rm(urlungdc)
+rm(root_folder)
+```
+
