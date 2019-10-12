@@ -42,3 +42,18 @@ rm(urlungdc)
 rm(root_folder)
 ```
 
+### add LSD Lexicoder Sentiment Dictionary
+
+install.packages("quanteda")
+install.packages("readtext")
+install.packages("devtools")
+devtools::install_github("quanteda/quanteda.corpora")
+packageVersion("quanteda")
+install.packages("newsmap")
+install.packages("tm")
+install.packages("NLP")
+install.packages("tibble")
+install.packages("slam")
+
+library(quanteda)
+example(data_dictionary_LSD2015)
