@@ -11,39 +11,38 @@ library(zip)
 
 ```
 
-
+1
 ### PTS and UNGDC data
 
 ```{r}
+resource <- paste0(getwd(),'/res')
+if(!dir.exists(resource)){
+dir.create(resource)
 
-dir.create(temp <- tempfile())
-
-urlungdc<-'https://dataverse.harvard.edu/api/access/datafile/:persistentId?persistentId=doi:10.7910/DVN/0TJX8Y/PZUURT'
-download.file(urlungdc, paste0(temp, '/PZUURT.zip'), 
-              exdir = temp)
-unzip(paste0(temp, '/PZUURT.zip'), exdir = temp)
-
-root_folder <- paste0(temp,'/Converted sessions/')
+download.file('https://dataverse.harvard.edu/api/access/datafile/:persistentId?persistentId=doi:10.7910/DVN/0TJX8Y/PZUURT', destfile=(paste0(temp<- tempfile())),mode="wb")
+unzip(zipfile=paste0(temp), exdir = resource)
+}
+root_folder <- paste0(resource,'/Converted sessions/')
 
 filelist <- list.files(path = root_folder, pattern = '*.txt', recursive = TRUE)
 filenames <- basename(filelist)
 ungdc_files <- data.frame(t(sapply(strsplit(filenames, '_'), 
                  function(x) c(x[1], x[2], substr(x[3], 1, 4)))))
 colnames(ungdc_files) <- c('country', 'number', 'year')
-ungdc_files$text <- sapply(paste0(root_folder, filelist), function(x) readChar(x, file.info(x)$size))
 
+ungdc_files$text <- sapply(paste0(root_folder, filelist), function(x) readChar(x, file.info(x)$size))
 load(url("http://www.politicalterrorscale.org/Data/Files/PTS-2019.RData"))
 
 unlink(temp)
 rm(temp)
 rm(filelist)
 rm(filenames)
-rm(urlungdc)
 rm(root_folder)
 ```
 
 ### add LSD Lexicoder Sentiment Dictionary
 
+```{r}
 install.packages("quanteda")
 install.packages("readtext")
 install.packages("devtools")
@@ -62,4 +61,7 @@ example(data_dictionary_LSD2015)
 
 install.packages("syuzhet")
 devtools::install_github("mjockers/syuzhet")
+
+```
+
 
