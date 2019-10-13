@@ -1,19 +1,33 @@
 ---
 title: "UNGDC"
-author: "JGUP"
-date: "10/10/2019"
+author: 
+- affiliation: Hertie School
+  email: n.locher@mpp.hertie-school.org
+  name: Nina Locher
+- affiliation: Hertie School
+  email: d.patino@mpp.hertie-school.org
+  name: Daniela Patiño Piñeros
+- affiliation: Hertie School
+  email: j.uribe-piedrahita@mpp.hertie-school.org
+  name: Juan Gonzalo Uribe Piedrahita
+date: "21/10/2019"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
+library(Amelia)
+library(gridExtra)
+library(quanteda)
+library(tibble)
+library(tidyverse)
 library(zip)
 
-
+#Sentiment Dictionary
+library(syuzhet)
 ```
 
 
 ### PTS and UNGDC data
-
 ```{r}
 
 dir.create(temp <- tempfile())
@@ -25,12 +39,23 @@ unzip(paste0(temp, '/PZUURT.zip'), exdir = temp)
 
 root_folder <- paste0(temp,'/Converted sessions/')
 
-filelist <- list.files(path = root_folder, pattern = '*.txt', recursive = TRUE)
+filelist <-list.files(path = root_folder, pattern = '*.txt', recursive = TRUE)
 filenames <- basename(filelist)
 ungdc_files <- data.frame(t(sapply(strsplit(filenames, '_'), 
                  function(x) c(x[1], x[2], substr(x[3], 1, 4)))))
 colnames(ungdc_files) <- c('country', 'number', 'year')
 ungdc_files$text <- sapply(paste0(root_folder, filelist), function(x) readChar(x, file.info(x)$size))
+ungdc_files<-as.data.frame(ungdc_files)
+ungdc_files$number<-as.integer(as.character(ungdc_files$number))
+ungdc_files$year<-as.integer(as.character(ungdc_files$year))
+ungdc_files$country<-as.character(ungdc_files$country)
+ungdc_files$text<-gsub("\n"," ",ungdc_files$text)
+ungdc_files$text<-gsub("\t"," ",ungdc_files$text)
+ungdc_files$text<-gsub("\r"," ",ungdc_files$text)
+ungdc_files$text<-gsub('"',"",ungdc_files$text)
+
+ungdc_files<-ungdc_files[!ungdc_files$year< 1976, ]
+
 
 load(url("http://www.politicalterrorscale.org/Data/Files/PTS-2019.RData"))
 
@@ -42,7 +67,105 @@ rm(urlungdc)
 rm(root_folder)
 ```
 
+###Misssing values analysis
+```{r}
+
+missmap(PTS_2019, main = "Missing values PTS")
+
+missmap(ungdc_files, main = "Missing values UNGDC")
+```
+
+
+
+```{r}
+dfungdc <- ungdc_files
+
+#Corpus
+c_dfungc<-dfungdc
+c_dfungc$text<-dfm(c_dfungc$text)
+
+
+c1_dfungc<-dfungdc
+c1_dfungc$text<-dfm(c1_dfungc$text, remove = stopwords("en"))
+
+
+c2_dfungc<-dfungdc
+c2_dfungc$text<-dfm(c2_dfungc$text, remove = stopwords("en"), remove_punct = TRUE)
+
+c3_dfungc<-dfungdc
+c3_dfungc$text<-dfm(c3_dfungc$text, remove = stopwords("en"), remove_punct = TRUE, stem = TRUE)
+
+c4_dfungc<-dfungdc
+c4_dfungc$text<-dfm(c4_dfungc$text, remove_punct = TRUE, ngrams = 2)
+
+df_c_dfungc<-topfeatures(c_dfungc$text) %>% 
+  as.data.frame() %>% 
+  `colnames<-`("n") %>% 
+  rownames_to_column("Word") %>% 
+  mutate(Words = fct_reorder(Word, n))
+
+g_df_c_dfungc<- ggplot(df_c_dfungc,aes(x=Words,y=n))+
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  ggtitle("Original")+
+  theme(plot.title = element_text(size = 8))
+
+
+df_c1_dfungc<-topfeatures(c1_dfungc$text) %>% 
+  as.data.frame() %>% 
+  `colnames<-`("n") %>% 
+  rownames_to_column("Word") %>% 
+  mutate(Words = fct_reorder(Word, n))
+
+g_df_c1_dfungc<- ggplot(df_c1_dfungc,aes(x=Words,y=n))+
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  ggtitle("-Stop Words")+
+  theme(plot.title = element_text(size = 8))
+
+df_c2_dfungc<-topfeatures(c2_dfungc$text) %>% 
+  as.data.frame() %>% 
+  `colnames<-`("n") %>% 
+  rownames_to_column("Word") %>% 
+  mutate(Words = fct_reorder(Word, n))
+
+g_df_c2_dfungc<- ggplot(df_c2_dfungc,aes(x=Words,y=n))+
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  ggtitle("-StopWords-Punctuation")+
+  theme(plot.title = element_text(size = 8))
+
+df_c3_dfungc<-topfeatures(c3_dfungc$text) %>% 
+  as.data.frame() %>% 
+  `colnames<-`("n") %>% 
+  rownames_to_column("Word") %>% 
+  mutate(Words = fct_reorder(Word, n))
+
+g_df_c3_dfungc<- ggplot(df_c3_dfungc,aes(x=Words,y=n))+
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  ggtitle("-StopWords-Punc+Stemming")+
+  theme(plot.title = element_text(size = 8,hjust = 0))
+
+df_c4_dfungc<-topfeatures(c4_dfungc$text) %>% 
+  as.data.frame() %>% 
+  `colnames<-`("n") %>% 
+  rownames_to_column("Word") %>% 
+  mutate(Words = fct_reorder(Word, n))
+
+g_df_c4_dfungc<- ggplot(df_c4_dfungc,aes(x=Words,y=n))+
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  ggtitle("-Punctuation +ngrams=2")+
+  theme(plot.title = element_text(size = 8,hjust = 0))
+
+grid.arrange(g_df_c_dfungc, g_df_c1_dfungc, g_df_c2_dfungc,g_df_c3_dfungc,g_df_c4_dfungc,
+             nrow = 2,
+             top="Word Count Review")
+```
+
 ### add LSD Lexicoder Sentiment Dictionary
+
 
 install.packages("quanteda")
 install.packages("readtext")
