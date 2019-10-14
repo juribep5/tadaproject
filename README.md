@@ -1,7 +1,7 @@
 # tadaproject
 Human Rights in the UNGA
 
-Replicating the code of the  The Lancet Countdown report: Nick Watts et al. (2018). "The 2018 report of the Lancet Countdown on health and climate change: shaping the health of nations for centuries to come." The Lancet, 392(10163): 2479-2514. With the UNGA Corpus.
+Using the code of the  The Lancet Countdown report: Nick Watts et al. (2018). "The 2018 report of the Lancet Countdown on health and climate change: shaping the health of nations for centuries to come." The Lancet, 392(10163): 2479-2514. With the UNGA Corpus.
 
 #Data
 
