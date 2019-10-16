@@ -121,6 +121,7 @@ HHRR_dfm <- dfm_lookup(dfm_1, HHRR_dict, valuetype = "fixed")
 head(HHRR_dfm)
 ```
 
+Data Frame
 
 ```{r}
 #creating a data frame --> CHECK IF THIS IS NECESARY IN THIS POINT OF THE PROJECT
@@ -136,6 +137,12 @@ HHRR_counts$year <- as.numeric(HHRR_counts$year)
 HHRR_counts <- plyr::rename(HHRR_counts, c("Human.Rights"="HHRR"))
 ```
 
+```{r}
+head(HHRR_counts)
+```
+
+
+
 ## Presentation of results
 
 ### Map for 2017 of HHRR
@@ -147,11 +154,17 @@ Keeping only country-years with at least one mention of HHRR
 mentions_HHRR <- subset(HHRR_counts, "human rights"!=0)
 ```
 
+```{r}
+head(mentions_HHRR)
+```
+
+
+
 Error in joinCountryData2Map --> check the packages
 
 ```{r}
 
-map <- joinCountryData2Map(subset(mentions_HHRR, year==2017), joinCode="ISO4apha", nameJoinColumn="country")
+map <- joinCountryData2Map(subset(mentions_HHRR, year==2017), joinCode="ISO3", nameJoinColumn="country")
 
 new_world <- subset(map, continent != "Antarctica")
 
@@ -159,7 +172,7 @@ pdf("worldmap_2017_health.pdf", width = 7, height = 3)
 
 par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
 
-mapParams <- mapCountryData(new_world, nameColumnToPlot="human rights", 
+mapParams <- mapCountryData(new_world, nameColumnToPlot="HHRR", 
                             mapTitle="2017 UN General Debate: HHRR", 
                             catMethod = "categorical", 
                             colourPalette = "heat", 
@@ -177,8 +190,13 @@ dev.off()
 ### Total counts
 
 ```{r}
+?country2Region
+```
+
+
+```{r}
 # calculating the total number of mentions by year
-sum <- summarise(group_by(country, year), count = sum(Human.Rights), mean = mean(Human.Rights))
+sum <- summarise(group_by(country2Region(count), year), count = sum(Human.Rights), mean = mean(Human.Rights))
 
 ggplot(sum, aes(x=year)) +
   theme_bw() +
