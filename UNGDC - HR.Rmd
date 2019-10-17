@@ -347,8 +347,10 @@ dict_HRGreene <- dictionary(list(human_rightsG = c("committed", "victims", "popu
 
 dict_HRWatanabe <- dictionary(list(human_rightsW = c("human_rights", "violat", "race", "dignit", "protect", "citizen", "educat", "child", "refugee", "communit", "people", "responsibl", "health", "world")))
 
-#HRdict <- c(HRdict["dict_HRGreene"], dict["dict_HRWatanabe"], dict["dict_HRFariss"])
-#?dictionary
+HRdict <- c(dict_HRGreene["human_rightsG"], dict_HRFariss["human_rightsF"], dict_HRWatanabe["human_rightsW"])
+HRdict
+
+example(dictionary)
 ###QUESTION: SHOULD WE USE SOFT HUMAN RIGHTS TERMS TOO??? (freedom of assembly etc)
 ###please check if all words should be used
 ```
