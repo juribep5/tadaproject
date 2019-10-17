@@ -167,101 +167,6 @@ grid.arrange(g_df_c_dfungc, g_df_c1_dfungc, g_df_c2_dfungc,g_df_c3_dfungc,g_df_c
 <<<<<<< Updated upstream
 =======
 ###Misssing values analysis
-```{r}
-
-missmap(PTS_2019, main = "Missing values PTS")
-
-missmap(ungdc_files, main = "Missing values UNGDC")
-```
-
-
-
-```{r}
-dfungdc <- ungdc_files
-
-#Corpus
-c_dfungc<-dfungdc
-c_dfungc$text<-dfm(c_dfungc$text)
-
-
-c1_dfungc<-dfungdc
-c1_dfungc$text<-dfm(c1_dfungc$text, remove = stopwords("en"))
-
-
-c2_dfungc<-dfungdc
-c2_dfungc$text<-dfm(c2_dfungc$text, remove = stopwords("en"), remove_punct = TRUE)
-
-c3_dfungc<-dfungdc
-c3_dfungc$text<-dfm(c3_dfungc$text, remove = stopwords("en"), remove_punct = TRUE, stem = TRUE)
-
-c4_dfungc<-dfungdc
-c4_dfungc$text<-dfm(c4_dfungc$text, remove_punct = TRUE, ngrams = 2)
-
-df_c_dfungc<-topfeatures(c_dfungc$text) %>% 
-  as.data.frame() %>% 
-  `colnames<-`("n") %>% 
-  rownames_to_column("Word") %>% 
-  mutate(Words = fct_reorder(Word, n))
-
-g_df_c_dfungc<- ggplot(df_c_dfungc,aes(x=Words,y=n))+
-  geom_col(show.legend = FALSE) +
-  coord_flip() +
-  ggtitle("Original")+
-  theme(plot.title = element_text(size = 8))
-
-
-df_c1_dfungc<-topfeatures(c1_dfungc$text) %>% 
-  as.data.frame() %>% 
-  `colnames<-`("n") %>% 
-  rownames_to_column("Word") %>% 
-  mutate(Words = fct_reorder(Word, n))
-
-g_df_c1_dfungc<- ggplot(df_c1_dfungc,aes(x=Words,y=n))+
-  geom_col(show.legend = FALSE) +
-  coord_flip() +
-  ggtitle("-Stop Words")+
-  theme(plot.title = element_text(size = 8))
-
-df_c2_dfungc<-topfeatures(c2_dfungc$text) %>% 
-  as.data.frame() %>% 
-  `colnames<-`("n") %>% 
-  rownames_to_column("Word") %>% 
-  mutate(Words = fct_reorder(Word, n))
-
-g_df_c2_dfungc<- ggplot(df_c2_dfungc,aes(x=Words,y=n))+
-  geom_col(show.legend = FALSE) +
-  coord_flip() +
-  ggtitle("-StopWords-Punctuation")+
-  theme(plot.title = element_text(size = 8))
-
-df_c3_dfungc<-topfeatures(c3_dfungc$text) %>% 
-  as.data.frame() %>% 
-  `colnames<-`("n") %>% 
-  rownames_to_column("Word") %>% 
-  mutate(Words = fct_reorder(Word, n))
-
-g_df_c3_dfungc<- ggplot(df_c3_dfungc,aes(x=Words,y=n))+
-  geom_col(show.legend = FALSE) +
-  coord_flip() +
-  ggtitle("-StopWords-Punc+Stemming")+
-  theme(plot.title = element_text(size = 8,hjust = 0))
-
-df_c4_dfungc<-topfeatures(c4_dfungc$text) %>% 
-  as.data.frame() %>% 
-  `colnames<-`("n") %>% 
-  rownames_to_column("Word") %>% 
-  mutate(Words = fct_reorder(Word, n))
-
-g_df_c4_dfungc<- ggplot(df_c4_dfungc,aes(x=Words,y=n))+
-  geom_col(show.legend = FALSE) +
-  coord_flip() +
-  ggtitle("-Punctuation +ngrams=2")+
-  theme(plot.title = element_text(size = 8,hjust = 0))
-
-grid.arrange(g_df_c_dfungc, g_df_c1_dfungc, g_df_c2_dfungc,g_df_c3_dfungc,g_df_c4_dfungc,
-             nrow = 2,
-             top="Word Count Review")
-```
 
 #Dictionary Analysis and KWIC (25-word context)
 
@@ -372,11 +277,6 @@ dev.off()
 ## Time series of total counts plot
 
 ### Total counts
-
-```{r}
-?country2Region
-```
-
 
 ```{r}
 # calculating the total number of mentions by year
