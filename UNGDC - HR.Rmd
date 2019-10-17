@@ -44,10 +44,11 @@ rm(root_folder)
 
 ```{r}
 install.packages("quanteda")
+devtools::install_github("quanteda/quanteda.corpora")
+devtools::install_github("kbenoit/quanteda.dictionaries")
 install.packages("readtext")
 install.packages("devtools")
-devtools::install_github("quanteda/quanteda.corpora")
-packageVersion("quanteda")
+
 install.packages("newsmap")
 install.packages("tm")
 install.packages("NLP")
@@ -55,13 +56,181 @@ install.packages("tibble")
 install.packages("slam")
 
 library(quanteda)
-example(data_dictionary_LSD2015)
+library(readtext)
+library(quanteda.dictionaries)
+#?quanteda.dictionaries
+data(data_dictionary_LSD2015)
+str(data_dictionary_LSD2015)
+pos.LSD <- data_dictionary_LSD2015[['positive']]
+neg.LSD <- data_dictionary_LSD2015[['negative']]
+#differentiating positive nad negative words within LSD2015
+#there is also pos.negative and neg.positive categories
+sample(pos.LSD, 10)
+sample(neg.LSD, 10)
+```
 
 ### add Syuzhet dictionary
 
+```{r}
 install.packages("syuzhet")
 devtools::install_github("mjockers/syuzhet")
+1
+example(dictionary)
 
 ```
 
+### add international military actors dictionary
 
+```{r}
+download.file()
+urlint <- 'https://raw.githubusercontent.com/openeventdata/tabari_dictionaries/master/IntMilitGroups.090831.actors.txt'
+intmilact <- readtext(urlint)
+
+```
+
+# import the Laver-Garry dictionary from Provalis Research
+dictfile <- tempfile()
+download.file("https://provalisresearch.com/Download/LaverGarry.zip", 
+              dictfile, mode = "wb")
+unzip(dictfile, exdir = (td <- tempdir()))
+dictlg <- dictionary(file = paste(td, "LaverGarry.cat", sep = "/"))
+head(dfm(data_corpus_inaugural, dictionary = dictlg))
+
+# import a LIWC formatted dictionary from http://www.moralfoundations.org
+download.file("https://goo.gl/5gmwXq", tf <- tempfile())
+dictliwc <- dictionary(file = tf, format = "LIWC")
+head(dfm(data_corpus_inaugural, dictionary = dictliwc))
+
+According to Greene and Park, we could add the following words to the human rights dictionary (based on PTS, US State Human Rights Report, and Richard (2005):
+
+period 1978-1989:
+abducted
+abuses
+africa
+air
+areas
+armed
+army
+assassination
+assassinations
+assistance
+attacks
+brutal
+busnesses
+captured
+casualties
+caused
+civilians
+command
+common
+controlled
+destroyed
+disappearances
+disappeared
+displaced
+el
+executed
+execution
+executions
+exit
+extensive
+fighting
+fled
+forced
+forces
+frequently
+government
+groups
+guerrilla
+guerrillas
+hundreds
+icrc
+innocent
+insurgency
+insurgent
+insurgents
+interpretation
+investigate
+iran
+
+window 1990-2005
+abuses
+according
+action
+aircraft
+areas
+armed
+army
+arrested
+aspect
+bandits
+bonded
+captured
+cease
+civilian
+civilians
+collaborating
+commanders
+committed
+common
+congo
+conscripted
+continued
+controlled
+displaced
+displacement
+dominated
+example
+executed
+executions
+extensive
+extortion
+factions
+fighting
+fled
+food
+force
+forced
+forces
+frequently
+genocide
+government
+groups
+guerrillas
+human
+humanitarian
+hundreds
+icrc
+including
+
+summary:
+according
+reported interpretation
+reliable
+committed
+scale
+victims
+populations
+armed
+army
+commanders
+conscripted
+assassinations
+regime
+massacres
+civilians
+internally
+displaced
+food
+humanitarian
+landmines
+money
+raped
+disappearances
+frequently
+numerous
+widespread
+common
+regularly
+routinely
+systematic extensive
