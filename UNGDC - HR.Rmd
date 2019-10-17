@@ -40,9 +40,8 @@ rm(filenames)
 rm(root_folder)
 ```
 
-### add LSD Lexicoder Sentiment Dictionary
+### add LSD Lexicoder Sentiment Dictionary: we have decided not to use lexicoder but to use the Syuzhet dictionary instead (so would want to delete this)
 
-```{r}
 install.packages("quanteda")
 devtools::install_github("quanteda/quanteda.corpora")
 devtools::install_github("kbenoit/quanteda.dictionaries")
@@ -67,15 +66,75 @@ neg.LSD <- data_dictionary_LSD2015[['negative']]
 #there is also pos.negative and neg.positive categories
 sample(pos.LSD, 10)
 sample(neg.LSD, 10)
-```
+
 
 ### add Syuzhet dictionary
 
 ```{r}
 install.packages("syuzhet")
+install.packages("devtools")
+install.packages("pander")
 devtools::install_github("mjockers/syuzhet")
 1
-example(dictionary)
+library(syuzhet)
+library(pander)
+
+#load the text as tokens to be analysed for sentiment
+
+?get_sentiment
+mode(ungdc_files)
+str(ungdc_files$text)
+toks_UNEX <- get_tokens(ungdc_files$text[1], pattern = "\\W")
+
+#get sentiment analysis with four different dictionaries: syuzhet (1), afinn, bing, and nrc
+#1: Create vectors for the sentiment dictionaries: syuzhet is mixed, bing is binary neg/pos, afinn is a scale and nrc has different emptional categories
+
+sent_syuzhet <- get_sentiment(toks_UNEX, method ="syuzhet")
+sent_bing <- get_sentiment(toks_UNEX, method ="afinn")
+sent_afinn <- get_sentiment(toks_UNEX, method ="bing")
+sent_nrc <- get_sentiment(toks_UNEX, method ="nrc", lang = "english")
+
+#2: get values
+
+head(sent_syuzhet, n = 100)
+head(sent_bing, n = 100)
+head(sent_afinn, n = 100)
+head(sent_nrc, n = 100)
+
+#3: descriptive analysis
+
+mean(sent_syuzhet)
+summary(sent_syuzhet)
+mean(sent_afinn)
+summary(sent_afinn)
+
+plot(
+  sent_syuzhet, 
+  type="h", 
+  main="Example Plot of Speech", 
+  xlab = "Speech Time", 
+  ylab= "Emotional Valence"
+  )
+
+#4: nrc dictionary
+
+cat_nrc <- get_nrc_sentiment(toks_UNEX)
+angry_toks <- which(cat_nrc$anger>0)
+toks_UNEX[angry_toks]
+#table of categories in emotions
+pander::pandoc.table(cat_nrc[1:10, 1:8], split.table = Inf)
+#table of negative vs positive
+pander::pandoc.table(cat_nrc[1:10, 9:10], split.table = Inf)
+
+#graph of categories in emotions in percentages - nice! this graph shows what kind of emotions they use in the first speech
+?barplot
+barplot(
+  sort(colSums(prop.table(cat_nrc[, 1:8]))), 
+  horiz = TRUE, 
+  cex.names = 0.7, 
+  las = 1, 
+  main = "Emotions in UN example", xlab="Percentage"
+  )
 
 ```
 
