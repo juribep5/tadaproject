@@ -186,3 +186,4 @@ example(data_dictionary_LSD2015)
 install.packages("syuzhet")
 devtools::install_github("mjockers/syuzhet")
 
+#test
