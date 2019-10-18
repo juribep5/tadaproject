@@ -27,14 +27,18 @@ library(syuzhet)
 ```
 
 
-### PTS and UNGDC data
+### UNGDC data
 ```{r}
-
 dir.create(temp <- tempfile())
 
 urlungdc<-'https://dataverse.harvard.edu/api/access/datafile/:persistentId?persistentId=doi:10.7910/DVN/0TJX8Y/PZUURT'
-download.file(urlungdc, paste0(temp, '/PZUURT.zip'), 
-              exdir = temp, mode="wb") 
+
+#MacOs
+#download.file(urlungdc, paste0(temp, '/PZUURT.zip'),exdir = temp) 
+
+#Win
+download.file(urlungdc, paste0(temp, '/PZUURT.zip'),exdir = temp, mode="wb") 
+
 unzip(paste0(temp, '/PZUURT.zip'), exdir = temp)
 
 root_folder <- paste0(temp,'/Converted sessions/')
@@ -56,15 +60,37 @@ ungdc_files$text<-gsub('"',"",ungdc_files$text)
 
 ungdc_files<-ungdc_files[!ungdc_files$year< 1976, ]
 
-
-load(url("http://www.politicalterrorscale.org/Data/Files/PTS-2019.RData"))
-
 unlink(temp)
 rm(temp)
 rm(filelist)
 rm(filenames)
 rm(urlungdc)
 rm(root_folder)
+```
+
+### UNGDC data
+```{r}
+load(url("http://www.politicalterrorscale.org/Data/Files/PTS-2019.RData"))
+
+PTS_2019<-arrange(PTS_2019,Country,Year)
+PTS_2019<-PTS_2019 %>% 
+  group_by(Country) %>% 
+  mutate(.,PTS_S_ch=c(NA,diff(PTS_S)))
+
+PTS_2019<-mutate(PTS_2019,PTS_S_var= ifelse(PTS_S_ch>0,1,0))
+
+PTS_2019<-PTS_2019 %>% 
+  group_by(Country) %>% 
+  mutate(.,PTS_H_ch=c(NA,diff(PTS_H)))
+
+PTS_2019<-mutate(PTS_2019,PTS_H_var= ifelse(PTS_H_ch>0,1,0))
+
+
+PTS_2019<-PTS_2019 %>% 
+  group_by(Country) %>% 
+  mutate(.,PTS_A_ch=c(NA,diff(PTS_A)))
+
+PTS_2019<-mutate(PTS_2019,PTS_A_var= ifelse(PTS_A_ch>0,1,0))
 ```
 
 ###Misssing values analysis
@@ -74,7 +100,6 @@ missmap(PTS_2019, main = "Missing values PTS")
 
 missmap(ungdc_files, main = "Missing values UNGDC")
 ```
-
 
 
 ```{r}
