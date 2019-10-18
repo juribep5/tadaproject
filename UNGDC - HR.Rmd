@@ -34,7 +34,7 @@ dir.create(temp <- tempfile())
 
 urlungdc<-'https://dataverse.harvard.edu/api/access/datafile/:persistentId?persistentId=doi:10.7910/DVN/0TJX8Y/PZUURT'
 download.file(urlungdc, paste0(temp, '/PZUURT.zip'), 
-              exdir = temp)
+              exdir = temp, mode="wb") 
 unzip(paste0(temp, '/PZUURT.zip'), exdir = temp)
 
 root_folder <- paste0(temp,'/Converted sessions/')
@@ -294,7 +294,6 @@ ggplot(sum, aes(x=year)) +
 
 
 
-
 >>>>>>> Stashed changes
 
 ### add LSD Lexicoder Sentiment Dictionary
@@ -311,11 +310,54 @@ install.packages("NLP")
 install.packages("tibble")
 install.packages("slam")
 
-library(quanteda)
+
 example(data_dictionary_LSD2015)
 
-### add Syuzhet dictionary
+### add H3 Dictionaries
 
-install.packages("syuzhet")
-devtools::install_github("mjockers/syuzhet")
+```{r}
+dict_intmilitary <- read.delim("https://raw.githubusercontent.com/openeventdata/tabari_dictionaries/master/IntMilitGroups.090831.actors.txt")
 
+```
+
+### Create Human Rights Dictionary
+
+```{r}
+library(quanteda)
+
+#create human rights lists from the three sources
+
+HRlistFariss <- list( c("kill"), c("forc"), c("arm"), c("group"), c("civilian"), c("human"), c("secur"), c("disappear"), c("attack"), c("execut") , c("tortur"), c("member"), c("includ"), c("arrest"), c("prison"), c("polit"), c("amnesti"), c("trial"), c("releas"), c("imprison"), c("sentenc"), c("charg"), c("conscience"), c("polic"), c("offic"), c("illtreat"), c("death"), c("court"), c("alleg"), c("law"), c("service"), c("concern"), c("appeal"), c("servic"), c("committee"),    c("militari"), c("area"), c("continu"), c("section"), c("state"), c("dure"), c("arrest"), c("accord"), c("offici"), c("presid"), c("opposit"), c("howev"), c("parti"), c("author"), c("law"), c("provid"), c("gener"), c("public"), c("constitut"), c("employ"), c("women"), c("right"), c("respect"), c("freedom"), c("prohibit"), c("case"), c("ngo"), c("tortur"), c("gener"), c("labor"), c("detain"), c("releas"), c("elect"), c("local"), c("presidenti"), c("region"), c("mani"), c("regim"), c("nation"), c("ethnic"), c("union"), c("practic"), c("work"), c("foreign"), c("children"), c("investig"), c("relig"), c("islam"), c("roma"), c("worker"), c("traffic"), c("feder"), c("parliament"))
+
+HRlistGreene <- list(c("committed"), c("victims"), c("populations"), c("scale"), c("armed"), c("army"), c("commanders"), c("conscripted"), c("assassinations"), c("massacres"), c("internally", "displaced"), c("food"), c("humanitarian"), c("landmines"), c("money"), c("raped"), c("disappearances"), c("frequently"), c("numerous"), c("widespread"), c("common"), c("regularly"), c("routinely"), c("systematic"), c("extensive"))
+
+HRlistWatanabe <- list(c("human", "rights"), c("violat"), c("race"), c("dignit"), c("protect"), c("citizen"), c("educat"), c("child"), c("refugee"), c("communit"), c("people"), c("responsibl"), c("health"), c("world"))
+
+HRlist <- do.call(c, list(HRlistFariss, HRlistGreene, HRlistWatanabe))
+summary(HRlist)
+
+#create dictionaries from the three sources
+
+dict_HRFariss <- dictionary(list(human_rightsF = c("kill", "forc", "arm", "group", "civilian", "human", "secur", "disappear", "attack", "execut" , "tortur", "member", "includ", "arrest", "prison", "polit", "amnesti", "trial", "releas", "imprison", "sentenc", "charg", "conscience", "polic", "offic", "illtreat", "death", "court", "alleg", "law", "service", "concern", "appeal", "servic", "committee", "militari", "area", "continu", "section", "state", "dure", "arrest", "offici", "presid", "opposit", "parti", "author", "law", "provid", "gener", "public", "constitut", "employ", "women", "right", "respect", "freedom", "prohibit", "case", "ngo", "tortur", "gener", "labor", "detain", "releas", "elect", "local", "presidenti", "region", "mani", "regim", "nation", "ethnic", "union", "practic", "work", "foreign", "children", "investig", "relig", "islam", "roma", "worker", "traffic", "feder", "parliament")))
+
+dict_HRGreene <- dictionary(list(human_rightsG = c("commit", "victim", "popul", "scale", "armi", "command", "conscript", "assassin", "massacr", "intern_displac", "food", "humanitarian", "landmin", "money", "rape", "disappear", "widespread", "systemat", "extens")))
+
+#checking the stemmed version of dict_HRGreene
+char_HRGreene <- as.character(dict_HRGreene)
+toks_HRGreene <- tokens(char_HRGreene)
+toks_HRGreene
+remove_HRGreene <- tokens(toks_HRGreene, remove_punct = TRUE)
+remove_HRGreene
+tokens_wordstem(remove_HRGreene)
+
+dict_HRWatanabe <- dictionary(list(human_rightsW = c("human_rights", "violat", "race", "dignit", "protect", "citizen", "educat", "child", "refugee", "communit", "people", "responsibl", "health", "world")))
+
+#combine the dictionaries
+HRdict <- c(dict_HRGreene["human_rightsG"], dict_HRFariss["human_rightsF"], dict_HRWatanabe["human_rightsW"])
+HRdict
+
+###please check if all words should be used
+```
+
+Descriptive analysis with human rights dictionary
+--> this needs a tokenized and corpus mode of our files so I will leave this here
