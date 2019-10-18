@@ -69,20 +69,29 @@ library(readxl)
 ### PTS and UNGDC data
 ```{r}
 #Upload UNGDC data
-ungd_files <- readtext("Converted sessions/*", 
-                                 docvarsfrom = "filenames", 
-                                 dvsep="_", 
-                                 docvarnames = c("Country", "Session", "Year"))
+dir.create(temp <- tempfile())
+urlungdc<-'https://dataverse.harvard.edu/api/access/datafile/:persistentId?persistentId=doi:10.7910/DVN/0TJX8Y/PZUURT'
+download.file(urlungdc, paste0(temp, '/PZUURT.zip'), mode="wb",
+              exdir = temp)
+unzip(paste0(temp, '/PZUURT.zip'), exdir = temp)
+
+ungd_files <- readtext(paste0(temp, "/Converted sessions/*"),
+                       docvarsfrom = "filenames", 
+                       dvsep="_", 
+                       docvarnames = c("Country", "Session", "Year"))
+head(ungd_files)
+
 ungd_files$doc_id <- str_replace(ungd_files$doc_id , ".txt", "") %>%
    str_replace(. , "_\\d{2}", "")
+
 ```
 
 
 ##Creating corpus object(s)
 ```{r}
 ungd_corpus <- corpus(ungd_files, text_field = "text") 
-ungdc.2018 <- corpus_subset(ungd_corpus, Year==2018)
-ungdc.2006t <- corpus_subset(ungd_corpus, Year>2006)
+ungdc.1990 <- corpus_subset(ungd_corpus, Year>1990)
+
 ```
 
 
