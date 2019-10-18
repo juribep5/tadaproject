@@ -51,7 +51,7 @@ library(haven)
 library(readxl)
 ```
 
-### PTS and UNGDC data
+### UNGDC data
 ```{r}
 #Upload UNGDC data
 dir.create(temp <- tempfile())
@@ -77,6 +77,72 @@ rm(urlungdc)
 
 ```
 
+### PTS data
+```{r}
+load(url("http://www.politicalterrorscale.org/Data/Files/PTS-2019.RData"))
+PTS_2019<-arrange(PTS_2019,Country,Year)
+PTS_2019<-PTS_2019 %>% 
+  group_by(Country) %>% 
+  mutate(.,PTS_S_ch=c(NA,diff(PTS_S)))
+PTS_2019<-mutate(PTS_2019,PTS_S_var= ifelse(PTS_S_ch>0,1,0))
+PTS_2019<-PTS_2019 %>% 
+  group_by(Country) %>% 
+  mutate(.,PTS_H_ch=c(NA,diff(PTS_H)))
+PTS_2019<-mutate(PTS_2019,PTS_H_var= ifelse(PTS_H_ch>0,1,0))
+PTS_2019<-PTS_2019 %>% 
+  group_by(Country) %>% 
+  mutate(.,PTS_A_ch=c(NA,diff(PTS_A)))
+PTS_2019<-mutate(PTS_2019,PTS_A_var= ifelse(PTS_A_ch>0,1,0))
+```
+
+merging the datasets UNGD and PTS
+```{r}
+install.packages("compareDF")
+library(compareDF)
+
+df_PTS_2019 <- data.frame(PTS_2019)
+df_ungd_files <- data.frame(ungd_files)
+
+print(PTS_2019)
+print(ungd_files)
+comp_year <- compare_df(ungd_files$Year, PTS_2019$Year, c("Year"))
+list(ungd_files$Year)
+all(df_ungd_files$Year == df_PTS_2019$Year)
+
+
+###DELETE first 8 YEARS how???
+#compare years
+PTS_2019 %>%
+      group_by(Year) %>%
+      summarise(n = n())
+ungd_files %>%
+      group_by(Year) %>%
+      summarise(n = n())
+#ungd_files$Year<-as.integer(as.character(ungd_files$Year))
+ungd_files1976 <- ungd_files[-(1970:1975)]
+ungd_files1976$Year
+
+PTS_2019 %>%
+      group_by(Year) %>%
+      summarise(n = n())
+
+#compare country
+PTS_2019 %>%
+      group_by(MergeCountry) %>%
+      summarise(n = n())
+ungd_files %>%
+      group_by(MergeCountry) %>%
+      summarise(n = n())
+
+colnames(ungd_files)[colnames(ungd_files)=="Country"] <- "MergeCountry"
+colnames(PTS_2019)[colnames(PTS_2019)=="WordBank_Code_A"] <- "MergeCountry"
+
+merge_PTS_ungd <- merge(PTS_2019, ungd_files, by = c('Year','MergeCountry'), all=TRUE)
+merge_PTS_ungd1976 <- subset(merge_PTS_ungd, !merge_PTS_ungd$Year<1976)
+NA_PTS_ungd1976 <- subset(merge_PTS_ungd1976, is.na(merge_PTS_ungd1976$MergeCountry))
+mergeNA_PTS_ungd_1976 <- subset(merge_PTS_ungd1976, !is.na(merge_PTS_ungd1976$MergeCountry))
+tail(mergeNA_PTS_ungd_1976)
+```
 
 ##Creating corpus object(s)
 ```{r}
