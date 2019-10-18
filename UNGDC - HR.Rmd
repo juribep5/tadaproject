@@ -101,6 +101,7 @@ missmap(PTS_2019, main = "Missing values PTS")
 missmap(ungdc_files, main = "Missing values UNGDC")
 ```
 
+creating corpus
 
 ```{r}
 dfungdc <- ungdc_files
@@ -383,6 +384,19 @@ HRdict
 
 ###please check if all words should be used
 ```
+
+Regression analysis with human rights dictionary
+
+```{r}
+
+
+
+
+
+
+
+```
+
 
 ADD actors and agents dictionary 
 
