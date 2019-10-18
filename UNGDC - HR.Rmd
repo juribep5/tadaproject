@@ -359,5 +359,52 @@ HRdict
 ###please check if all words should be used
 ```
 
+ADD actors and agents dictionary 
+
+```{r}
+?dictionary
+?download.file
+?load
+
+tempagents <- tempfile()
+fileagents <- download.file("", tempagents)
+X <- read.csv(url())
+fileagents <- read.csv("https://raw.githubusercontent.com/juribep5/tadaproject/master/agents.csv", header = TRUE, sep = ",")
+fileagents = subset(fileagents, select = -c(note))
+colnames(fileagents) <- c("agent", "topic")
+summary(fileagents)
+str(fileagents)
+listagents <- list
+list
+
+dictagents <- dictionary(list(agents = fileagents, tolower = TRUE))
+fileagents
+str(listagents)
+
+
+
+
+
+
+
+
+
+
+
+```
+
+ungd_files <- readtext("Converted sessions/*", 
+                                 docvarsfrom = "filenames", 
+                                 dvsep="_", 
+                                 docvarnames = c("Country", "Session", "Year"))
+
+
+ungd_files$doc_id <- str_replace(ungd_files$doc_id , ".txt", "") %>%
+   str_replace(. , "_\\d{2}", "")
+
+
+
 Descriptive analysis with human rights dictionary
 --> this needs a tokenized and corpus mode of our files so I will leave this here
+
+
