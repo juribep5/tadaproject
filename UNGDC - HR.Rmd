@@ -68,7 +68,7 @@ rm(urlungdc)
 rm(root_folder)
 ```
 
-### UNGDC data
+### PTS data
 ```{r}
 load(url("http://www.politicalterrorscale.org/Data/Files/PTS-2019.RData"))
 
