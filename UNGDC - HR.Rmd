@@ -7,24 +7,18 @@ output: html_document
 
 ```{r setup, include=FALSE}
 library(zip)
-
-
 ```
-
 
 ### PTS and UNGDC data
 
 ```{r}
-
 #filelist <- list.files(path = root_folder, pattern = '*.txt', recursive = TRUE)
 #filenames <- basename(filelist)
 #ungdc_files <- data.frame(t(sapply(strsplit(filenames, '_'), 
 #                 function(x) c(x[1], x[2], substr(x[3], 1, 4)))))
 #colnames(ungdc_files) <- c('country', 'number', 'year')
 #ungdc_files$text <- sapply(paste0(root_folder, filelist), function(x) readChar(x, file.info(x)$size))
-
 #load(url("http://www.politicalterrorscale.org/Data/Files/PTS-2019.RData"))
-
 ```
 
 # tadaproject
@@ -56,101 +50,124 @@ library(readxl)
 #Upload UNGDC data
 dir.create(temp <- tempfile())
 urlungdc<-'https://dataverse.harvard.edu/api/access/datafile/:persistentId?persistentId=doi:10.7910/DVN/0TJX8Y/PZUURT'
+
 download.file(urlungdc, paste0(temp, '/PZUURT.zip'), mode="wb",
               exdir = temp)
+
 unzip(paste0(temp, '/PZUURT.zip'), exdir = temp)
 
 ungd_files <- readtext(paste0(temp, "/Converted sessions/*"),
                        docvarsfrom = "filenames", 
                        dvsep="_", 
                        docvarnames = c("Country", "Session", "Year"))
+
 head(ungd_files)
 
 ungd_files$doc_id <- str_replace(ungd_files$doc_id , ".txt", "") %>%
    str_replace(. , "_\\d{2}", "")
 
 unlink(temp)
+
 rm(temp)
 #rm(filelist)
 #rm(filenames)
 rm(urlungdc)
-
 ```
+
+```{r}
+head(ungd_files)
+```
+
+
 
 ### PTS data
 ```{r}
 load(url("http://www.politicalterrorscale.org/Data/Files/PTS-2019.RData"))
 PTS_2019<-arrange(PTS_2019,Country,Year)
+
 PTS_2019<-PTS_2019 %>% 
   group_by(Country) %>% 
   mutate(.,PTS_S_ch=c(NA,diff(PTS_S)))
+
 PTS_2019<-mutate(PTS_2019,PTS_S_var= ifelse(PTS_S_ch>0,1,0))
+
 PTS_2019<-PTS_2019 %>% 
   group_by(Country) %>% 
   mutate(.,PTS_H_ch=c(NA,diff(PTS_H)))
+
 PTS_2019<-mutate(PTS_2019,PTS_H_var= ifelse(PTS_H_ch>0,1,0))
+
 PTS_2019<-PTS_2019 %>% 
   group_by(Country) %>% 
   mutate(.,PTS_A_ch=c(NA,diff(PTS_A)))
+
 PTS_2019<-mutate(PTS_2019,PTS_A_var= ifelse(PTS_A_ch>0,1,0))
 ```
 
-merging the datasets UNGD and PTS
+
+### Merging the datasets UNGD and PTS
+
 ```{r}
 install.packages("compareDF")
+
 library(compareDF)
+```
 
-df_PTS_2019 <- data.frame(PTS_2019)
-df_ungd_files <- data.frame(ungd_files)
-
-print(PTS_2019)
-print(ungd_files)
-comp_year <- compare_df(ungd_files$Year, PTS_2019$Year, c("Year"))
-list(ungd_files$Year)
-all(df_ungd_files$Year == df_PTS_2019$Year)
-
-
+```{r}
 ###DELETE first 8 YEARS how???
 #compare years
 PTS_2019 %>%
       group_by(Year) %>%
       summarise(n = n())
+
 ungd_files %>%
       group_by(Year) %>%
       summarise(n = n())
-#ungd_files$Year<-as.integer(as.character(ungd_files$Year))
+
+#ungd_files$Year<-as.integer(as.character(ungd_files$Year)) #WHAT are we doing with this line?
 ungd_files1976 <- ungd_files[-(1970:1975)]
 ungd_files1976$Year
 
 PTS_2019 %>%
       group_by(Year) %>%
       summarise(n = n())
+```
 
+```{r}
 #compare country
+colnames(ungd_files)[colnames(ungd_files)=="Country"] <- "MergeCountry"
+colnames(PTS_2019)[colnames(PTS_2019)=="WordBank_Code_A"] <- "MergeCountry"
+
 PTS_2019 %>%
       group_by(MergeCountry) %>%
       summarise(n = n())
+
 ungd_files %>%
       group_by(MergeCountry) %>%
       summarise(n = n())
 
-colnames(ungd_files)[colnames(ungd_files)=="Country"] <- "MergeCountry"
-colnames(PTS_2019)[colnames(PTS_2019)=="WordBank_Code_A"] <- "MergeCountry"
-
 merge_PTS_ungd <- merge(PTS_2019, ungd_files, by = c('Year','MergeCountry'), all=TRUE)
+
 merge_PTS_ungd1976 <- subset(merge_PTS_ungd, !merge_PTS_ungd$Year<1976)
+
 NA_PTS_ungd1976 <- subset(merge_PTS_ungd1976, is.na(merge_PTS_ungd1976$MergeCountry))
+
 mergeNA_PTS_ungd_1976 <- subset(merge_PTS_ungd1976, !is.na(merge_PTS_ungd1976$MergeCountry))
+
 tail(mergeNA_PTS_ungd_1976)
+```
+
+```{r}
+#Deleting NAs in the text - speeches rows from the "mergeNA_PTS_ungd_1976"
+clean_PTS_ungd1976 <- subset(mergeNA_PTS_ungd_1976, !is.na(mergeNA_PTS_ungd_1976$text))
 ```
 
 ##Creating corpus object(s)
 ```{r}
-ungd_corpus <- corpus(ungd_files, text_field = "text") 
-ungdc.1990 <- corpus_subset(ungd_corpus, Year>1990)
+ungd_corpus <- corpus(clean_PTS_ungd1976, text_field = "text") 
 
+# ungdc.1990 <- corpus_subset(ungd_corpus, Year>1990)
 ```
-
 
 #Pre-processing
 
@@ -158,6 +175,7 @@ Tokenizing corpus.
 
 ```{r}
 #Tokenization and basic pre-processing
+
 toks_UNGD <- tokens(ungd_corpus, what = "word",
               remove_punct = TRUE,
               remove_symbols = TRUE,
@@ -171,36 +189,45 @@ toks_UNGD <- tokens(ungd_corpus, what = "word",
 
 ```{r}
 lower_UNGD <- tokens_tolower(toks_UNGD)
+
 stop_UNGD <- tokens_select(lower_UNGD, stopwords("english"), selection = "remove", padding = FALSE)
-ngram_UNGD <- tokens(stop_UNGD, ngrams = c(1:2), include_docvars = TRUE) 
- 
+
+ngram_UNGD <- tokens(stop_UNGD, ngrams = c(1:2), include_docvars = TRUE)
+```
+
+```{r}
+head(lower_UNGD)
 ```
 
 #Dictionary Analysis HR binary
-## Stage 1 - Human Rights terms
+## 1. Identifying the frequency of usage of "Human Rights" in UN Speeches
 
-Creating compound tokens from the key terms identified:
+Creating compound tokens from the "Human Rights" concept:
 
 ```{r}
 listHHRR <- list( c("Human", "Rights")) 
 ```
 
+```{r}
+listHHRR
+```
 
 ```{r}
 compound_UNGD <- tokens_compound(lower_UNGD, listHHRR, valuetype = "fixed", concatenator = "_")
 ```
 
-Creating the dictionary object of Human Rights terms:
+Creating a Dictionary of Human Rights, in order to identify the frequency of the concept in UNGD Speeches:
 
 ```{r}
 HHRR_dict <- dictionary(list(Human.Rights=c("Human Rights")))
+HHRR_dict
 ```
 
 ## Look up Human Rights term counts
 
-Looking up and counting terms from Human Rights in the DFM
+Looking up and counting the frequency of usage of "Human Rights" in the UN GA speeches.
 
-DFM_LOOKUP --> Apply a dictionary (HHRR) to a dfm by looking up all dfm features for matches in a a set of dictionary values, and replace those features with a count of the dictionary's keys.
+--> Apply a dictionary (HHRR) to a dfm by looking up all dfm features for matches in a a set of dictionary values.
 
 ```{r}
 dfm_UNGD <- dfm(compound_UNGD)
@@ -231,60 +258,56 @@ head(HHRR_counts)
 ```
 
 
-Presentation of results
-Map for 2017 of HHRR
-
-Keeping only country-years with at least one mention of HHRR
-
 
 ```{r}
-mentions_HHRR <- subset(HHRR_counts, HHRR!=0)
+#Merge HHRR counts with the MergeNA_PTS_ungd_1976 data set
+
+colnames(HHRR_counts)[colnames(HHRR_counts)=="country"] <- "MergeCountry"
+colnames(HHRR_counts)[colnames(HHRR_counts)=="year"] <- "Year"
+
+colnames(clean_PTS_ungd1976)[colnames(clean_PTS_ungd1976)=="MergeCountry"] <- "MergeCountry"
+
+clean_PTS_ungd1976 %>%
+      group_by(MergeCountry) %>%
+      summarise(n = n())
+
+HHRR_counts %>%
+      group_by(MergeCountry) %>%
+      summarise(n = n())
+
+merge_HHRRcounts <- merge(clean_PTS_ungd1976, HHRR_counts, by = c('MergeCountry','Year'), all=TRUE)
+
+head(merge_HHRRcounts)
 ```
 
-```{r}
-head(mentions_HHRR)
-```
 
 
+#Baseline
 
-Error in joinCountryData2Map --> check the packages
+## Model 1. Relation between changes in PTS and mentions of the "Human Rights" concept in UNGD speeches
 
 ```{r}
-map <- joinCountryData2Map(subset(mentions_HHRR, year==2017), joinCode="ISO3", nameJoinColumn="country")
-new_world <- subset(map, continent != "Antarctica")
-pdf("worldmap_2017_health.pdf", width = 7, height = 3)
-par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
-mapParams <- mapCountryData(new_world, nameColumnToPlot="HHRR", 
-                            mapTitle="2017 UN General Debate: HHRR", 
-                            catMethod = "categorical", 
-                            colourPalette = "heat", 
-                            oceanCol = "lightblue", 
-                            missingCountryCol = "white", 
-                            addLegend="FALSE")
-do.call( addMapLegendBoxes, c(mapParams,title="Number of mentions", x = "left", cex=0.5))
-dev.off()
-```
-
-## Time series of total counts plot
-
-### Total counts
-
-```{r}
-?country2Region
+install.packages("texreg")
+install.packages("lmtest")
 ```
 
 
 ```{r}
-# calculating the total number of mentions by year
-sum <- summarise(group_by(country2Region(count), year), count = sum(Human.Rights), mean = mean(Human.Rights))
-ggplot(sum, aes(x=year)) +
-  theme_bw() +
-  geom_line(aes(y= HHRR_count), colour = "blue", alpha = 0.9) +
-  ylab("Total number of references per UNGD session") + xlab("Year") + 
-#  scale_y_continuous(limits=c(0, 140), breaks = c(1, 50, 100, 134)) +
-  scale_x_continuous(limits=c(1970, 2017), breaks = c(1970, 1988, 2000, 2009,2014, 2017)) +
-   annotate("text", x = 1993, y = 250, label = "Human Rights", colour = "blue")
+library(foreign)
+library(texreg)
+library(lmtest)
 ```
+
+Linear regression model between changes in PTS (State Department) and mentions of the "Human Rights" concept in UNGD speeches (1976 - 2018)
+
+```{r}
+ModelHHRR <- lm (HHRR ~ PTS_S + PTS_S_ch + PTS_S*PTS_S_ch, data = merge_HHRRcounts)
+
+screenreg(ModelHHRR)
+```
+
+
+
 
 regression
 reg HHRR changeinPTS PTS_year PTS_year * changeinPTS, 
