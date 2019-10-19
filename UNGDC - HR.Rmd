@@ -28,8 +28,7 @@ Using the code of the  The Lancet Countdown report: Nick Watts et al. (2018). "T
 
 #Data
 
-Loading data from the UNGDC data
-
+#Loading data from the UNGDC data
 
 ```{r message=FALSE}
 #Loading packages and data
@@ -114,21 +113,12 @@ library(compareDF)
 ```
 
 ```{r}
-###DELETE first 8 YEARS how???
 #compare years
 PTS_2019 %>%
       group_by(Year) %>%
       summarise(n = n())
 
 ungd_files %>%
-      group_by(Year) %>%
-      summarise(n = n())
-
-#ungd_files$Year<-as.integer(as.character(ungd_files$Year)) #WHAT are we doing with this line?
-ungd_files1976 <- ungd_files[-(1970:1975)]
-ungd_files1976$Year
-
-PTS_2019 %>%
       group_by(Year) %>%
       summarise(n = n())
 ```
@@ -154,6 +144,7 @@ NA_PTS_ungd1976 <- subset(merge_PTS_ungd1976, is.na(merge_PTS_ungd1976$MergeCoun
 
 mergeNA_PTS_ungd_1976 <- subset(merge_PTS_ungd1976, !is.na(merge_PTS_ungd1976$MergeCountry))
 
+head(mergeNA_PTS_ungd_1976)
 tail(mergeNA_PTS_ungd_1976)
 ```
 
@@ -162,7 +153,7 @@ tail(mergeNA_PTS_ungd_1976)
 clean_PTS_ungd1976 <- subset(mergeNA_PTS_ungd_1976, !is.na(mergeNA_PTS_ungd_1976$text))
 ```
 
-##Creating corpus object(s)
+##Creating corpus object: clean ungd merged corpus for regression analysis
 ```{r}
 ungd_corpus <- corpus(clean_PTS_ungd1976, text_field = "text") 
 
@@ -193,10 +184,11 @@ lower_UNGD <- tokens_tolower(toks_UNGD)
 stop_UNGD <- tokens_select(lower_UNGD, stopwords("english"), selection = "remove", padding = FALSE)
 
 ngram_UNGD <- tokens(stop_UNGD, ngrams = c(1:2), include_docvars = TRUE)
+head(ngram_UNGD)
 ```
 
 ```{r}
-head(lower_UNGD)
+#head(lower_UNGD)
 ```
 
 #Dictionary Analysis HR binary
@@ -213,7 +205,7 @@ listHHRR
 ```
 
 ```{r}
-compound_UNGD <- tokens_compound(lower_UNGD, listHHRR, valuetype = "fixed", concatenator = "_")
+compound_UNGD_HHRR <- tokens_compound(lower_UNGD, listHHRR, valuetype = "fixed", concatenator = "_")
 ```
 
 Creating a Dictionary of Human Rights, in order to identify the frequency of the concept in UNGD Speeches:
@@ -230,8 +222,8 @@ Looking up and counting the frequency of usage of "Human Rights" in the UN GA sp
 --> Apply a dictionary (HHRR) to a dfm by looking up all dfm features for matches in a a set of dictionary values.
 
 ```{r}
-dfm_UNGD <- dfm(compound_UNGD)
-HHRR_dfm <- dfm_lookup(dfm_UNGD, HHRR_dict, valuetype = "fixed")
+dfm_UNGD_HHRR <- dfm(compound_UNGD_HHRR)
+HHRR_dfm <- dfm_lookup(dfm_UNGD_HHRR, HHRR_dict, valuetype = "fixed")
 ```
 
 ```{r}
@@ -242,10 +234,10 @@ Data Frame of human rights variables in UNGDC
 
 ```{r}
 #creating a data frame 
-Human.Rights <- convert(HHRR_dfm, to = "data.frame")
+Human.Rights_HHRR <- convert(HHRR_dfm, to = "data.frame")
 
 #converting documentID into two columns - country and year
-HHRR_counts <- Human.Rights %>%
+HHRR_counts <- Human.Rights_HHRR %>%
   separate(document, c("country", "year"), "_")
 
 #year as numeric
@@ -258,14 +250,15 @@ head(HHRR_counts)
 ```
 
 
-
 ```{r}
 #Merge HHRR counts with the MergeNA_PTS_ungd_1976 data set
 
 colnames(HHRR_counts)[colnames(HHRR_counts)=="country"] <- "MergeCountry"
 colnames(HHRR_counts)[colnames(HHRR_counts)=="year"] <- "Year"
+head(HHRR_counts)
 
 colnames(clean_PTS_ungd1976)[colnames(clean_PTS_ungd1976)=="MergeCountry"] <- "MergeCountry"
+head(clean_PTS_ungd1976)
 
 clean_PTS_ungd1976 %>%
       group_by(MergeCountry) %>%
@@ -279,7 +272,6 @@ merge_HHRRcounts <- merge(clean_PTS_ungd1976, HHRR_counts, by = c('MergeCountry'
 
 head(merge_HHRRcounts)
 ```
-
 
 
 #Baseline
@@ -301,13 +293,319 @@ library(lmtest)
 Linear regression model between changes in PTS (State Department) and mentions of the "Human Rights" concept in UNGD speeches (1976 - 2018)
 
 ```{r}
-ModelHHRR <- lm (HHRR ~ PTS_S + PTS_S_ch + PTS_S*PTS_S_ch, data = merge_HHRRcounts)
-
+ModelHHRR_S <- lm (HHRR ~ PTS_S + PTS_S_ch + PTS_S*PTS_S_ch, data = merge_HHRRcounts)
 screenreg(ModelHHRR)
+#PTS_S significant and negative
+
+ModelHHRR_A <- lm (HHRR ~ PTS_A + PTS_A_ch + PTS_A*PTS_A_ch, data = merge_HHRRcounts)
+screenreg(ModelHHRR_A)
+#PTS_A significant and negative
+
+ModelHHRR_H <- lm (HHRR ~ PTS_H + PTS_H_ch + PTS_H*PTS_H_ch, data = merge_HHRRcounts)
+screenreg(ModelHHRR_H)
+#PTS_H insignificant
 ```
 
 
 
+###Model Regressoin with sophisticated human rights dictionary
+### Create Human Rights Dictionary
+
+```{r}
+#create human rights lists from the three sources
+
+HRlistFariss <- list( c("kill"), c("forc"), c("arm"), c("group"), c("civilian"), c("human"), c("secur"), c("disappear"), c("attack"), c("execut") , c("tortur"), c("member"), c("includ"), c("arrest"), c("prison"), c("polit"), c("amnesti"), c("trial"), c("releas"), c("imprison"), c("sentenc"), c("charg"), c("conscience"), c("polic"), c("offic"), c("illtreat"), c("death"), c("court"), c("alleg"), c("law"), c("service"), c("concern"), c("appeal"), c("servic"), c("committee"),    c("militari"), c("area"), c("continu"), c("section"), c("state"), c("dure"), c("arrest"), c("accord"), c("offici"), c("presid"), c("opposit"), c("howev"), c("parti"), c("author"), c("law"), c("provid"), c("gener"), c("public"), c("constitut"), c("employ"), c("women"), c("right"), c("respect"), c("freedom"), c("prohibit"), c("case"), c("ngo"), c("tortur"), c("gener"), c("labor"), c("detain"), c("releas"), c("elect"), c("local"), c("presidenti"), c("region"), c("mani"), c("regim"), c("nation"), c("ethnic"), c("union"), c("practic"), c("work"), c("foreign"), c("children"), c("investig"), c("relig"), c("islam"), c("roma"), c("worker"), c("traffic"), c("feder"), c("parliament"))
+
+HRlistGreene <- list(c("committed"), c("victims"), c("populations"), c("scale"), c("armed"), c("army"), c("commanders"), c("conscripted"), c("assassinations"), c("massacres"), c("internally", "displaced"), c("food"), c("humanitarian"), c("landmines"), c("money"), c("raped"), c("disappearances"), c("frequently"), c("numerous"), c("widespread"), c("common"), c("regularly"), c("routinely"), c("systematic"), c("extensive"))
+
+HRlistWatanabe <- list(c("human", "rights"), c("violat"), c("race"), c("dignit"), c("protect"), c("citizen"), c("educat"), c("child"), c("refugee"), c("communit"), c("people"), c("responsibl"), c("health"), c("world"))
+
+HRlist <- do.call(c, list(HRlistFariss, HRlistGreene, HRlistWatanabe))
+#summary(HRlist)
+
+```
+
+Creating compound tokens from the "Human Rights" concept:
+
+```{r}
+compound_UNGD_HRlist <- tokens_compound(lower_UNGD, HRlist, valuetype = "fixed", concatenator = "_")
+#compound_UNGD_HRlist
+```
+
+#create dictionaries from the three sources
+
+```{r}
+dict_HRFariss <- dictionary(list(human_rightsF = c("kill", "forc", "arm", "group", "civilian", "human", "secur", "disappear", "attack", "execut" , "tortur", "member", "includ", "arrest", "prison", "polit", "amnesti", "trial", "releas", "imprison", "sentenc", "charg", "conscience", "polic", "offic", "illtreat", "death", "court", "alleg", "law", "service", "concern", "appeal", "servic", "committee", "militari", "area", "continu", "section", "state", "dure", "arrest", "offici", "presid", "opposit", "parti", "author", "law", "provid", "gener", "public", "constitut", "employ", "women", "right", "respect", "freedom", "prohibit", "case", "ngo", "tortur", "gener", "labor", "detain", "releas", "elect", "local", "presidenti", "region", "mani", "regim", "nation", "ethnic", "union", "practic", "work", "foreign", "children", "investig", "relig", "islam", "roma", "worker", "traffic", "feder", "parliament")))
+
+dict_HRGreene <- dictionary(list(human_rightsG = c("commit", "victim", "popul", "scale", "armi", "command", "conscript", "assassin", "massacr", "intern_displac", "food", "humanitarian", "landmin", "money", "rape", "disappear", "widespread", "systemat", "extens")))
+
+#checking the stemmed version of dict_HRGreene
+char_HRGreene <- as.character(dict_HRGreene)
+toks_HRGreene <- tokens(char_HRGreene)
+toks_HRGreene
+remove_HRGreene <- tokens(toks_HRGreene, remove_punct = TRUE)
+remove_HRGreene
+tokens_wordstem(remove_HRGreene)
+
+dict_HRWatanabe <- dictionary(list(human_rightsW = c("human_rights", "violat", "race", "dignit", "protect", "citizen", "educat", "child", "refugee", "communit", "people", "responsibl", "health", "world")))
+
+#combine the dictionaries
+HRdict <- c(dict_HRGreene["human_rightsG"], dict_HRFariss["human_rightsF"], dict_HRWatanabe["human_rightsW"])
+
+#one complete dictionary
+HRdict_total <- dictionary(list(human_rights_total = c("kill", "forc", "arm", "group", "civilian", "human", "secur", "disappear", "attack", "execut" , "tortur", "member", "includ", "arrest", "prison", "polit", "amnesti", "trial", "releas", "imprison", "sentenc", "charg", "conscience", "polic", "offic", "illtreat", "death", "court", "alleg", "law", "service", "concern", "appeal", "servic", "committee", "militari", "area", "continu", "section", "state", "dure", "arrest", "offici", "presid", "opposit", "parti", "author", "law", "provid", "gener", "public", "constitut", "employ", "women", "right", "respect", "freedom", "prohibit", "case", "ngo", "tortur", "gener", "labor", "detain", "releas", "elect", "local", "presidenti", "region", "mani", "regim", "nation", "ethnic", "union", "practic", "work", "foreign", "children", "investig", "relig", "islam", "roma", "worker", "traffic", "feder", "parliament", "commit", "victim", "popul", "scale", "armi", "command", "conscript", "assassin", "massacr", "intern_displac", "food", "humanitarian", "landmin", "money", "rape", "disappear", "widespread", "systemat", "extens", "human_rights", "violat", "race", "dignit", "protect", "citizen", "educat", "child", "refugee", "communit", "people", "responsibl", "health", "world")))
+
+```
+
+#Dictionary Analysis HR binary
+## 1. Identifying the frequency of usage of "Human Rights" in UN Speeches
+
+```{r}
+HRdict
+HRdict_total
+```
+
+## Look up Human Rights dictionary counts
+
+Looking up and counting the frequency of usage of "Human Rights" in the UN GA speeches.
+
+--> Apply a dictionary (HHRR) to a dfm by looking up all dfm features for matches in a a set of dictionary values.
+
+```{r}
+dfm_UNGD_HR <- dfm(compound_UNGD_HRlist)
+#combined dict
+HR_dfm <- dfm_lookup(dfm_UNGD_HR, HRdict, valuetype = "fixed")
+#total dict
+HR_dfm_total <- dfm_lookup(dfm_UNGD_HR, HRdict_total, valuetype = "fixed")
+
+```
+
+```{r}
+head(HR_dfm)
+head(HR_dfm_total)
+```
+
+Data Frame of human rights variables in UNGDC
+
+```{r}
+#creating a data frame 
+Human.Rights_HR <- convert(HR_dfm_total, to = "data.frame")
+
+#converting documentID into two columns - country and year
+HR_counts <- Human.Rights_HR %>%
+  separate(document, c("country", "year"), "_")
+
+#year as numeric
+HR_counts$year <- as.numeric(HR_counts$year)
+head(HR_counts)
+HR_counts <- plyr::rename(HR_counts, c("human_rights_total"="HR"))
+```
+
+```{r}
+head(HR_counts)
+```
+
+
+```{r}
+#Merge total HR dictionary counts with the MergeNA_PTS_ungd_1976 data set
+
+colnames(HR_counts)[colnames(HR_counts)=="country"] <- "MergeCountry"
+colnames(HR_counts)[colnames(HR_counts)=="year"] <- "Year"
+head(HR_counts)
+
+colnames(merge_HHRRcounts)[colnames(merge_HHRRcounts)=="MergeCountry"] <- "MergeCountry"
+head(merge_HHRRcounts)
+
+merge_HHRRcounts %>%
+      group_by(MergeCountry) %>%
+      summarise(n = n())
+
+HR_counts %>%
+      group_by(MergeCountry) %>%
+      summarise(n = n())
+
+merge_HRdict_counts <- merge(merge_HHRRcounts, HR_counts, by = c('MergeCountry','Year'), all=TRUE)
+
+head(merge_HRdict_counts)
+#merged dataset with both dictionaries: HHRRterm and HRdict
+```
+
+
+#Sophisticated Human Rights Dictionary Model
+
+## Model 2. Relation between changes in PTS and mentions of the features within the human rights dictionary in UNGD speeches
+
+Linear regression model between changes in PTS (State Department) and mentions of the "Human Rights" concept in UNGD speeches (1976 - 2018)
+
+```{r}
+ModelHRdict_S <- lm (HR ~ PTS_S + PTS_S_ch + PTS_S*PTS_S_ch, data = merge_HRdict_counts)
+screenreg(ModelHRdict_S)
+
+ModelHRdict_A <- lm (HR ~ PTS_A + PTS_A_ch + PTS_A*PTS_A_ch, data = merge_HRdict_counts)
+screenreg(ModelHRdict_A)
+
+ModelHRdict_H <- lm (HR ~ PTS_H + PTS_H_ch + PTS_H*PTS_H_ch, data = merge_HRdict_counts)
+screenreg(ModelHRdict_H)
+```
+
+
+###Hypothesis 2: sentiment dictionary analysis
+
+### add Syuzhet dictionary (#added from Nina branch)
+
+```{r}
+install.packages("syuzhet")
+install.packages("devtools")
+install.packages("pander")
+devtools::install_github("mjockers/syuzhet")
+1
+library(syuzhet)
+library(pander)
+```
+
+```{r}
+#get sentiment analysis with four different dictionaries: syuzhet (1), afinn, bing, and nrc
+
+#1: Create vectors for the sentiment dictionaries: syuzhet is mixed, bing is binary neg/pos, afinn is a scale and nrc has different emptional categories
+sent_syuzhet <- get_sentiment(stop_UNGD, method ="syuzhet")
+sent_afinn <- get_sentiment(stop_UNGD, method ="afinn")
+sent_bing <- get_sentiment(stop_UNGD, method ="bing")
+sent_nrc <- get_sentiment(stop_UNGD, method ="nrc", lang = "english")
+
+dict_bing <- get_sentiment_dictionary(dictionary = "bing")
+dict_syuzhet <- get_sentiment_dictionary(dictionary = "syuzhet")
+dict_afinn <- get_sentiment_dictionary(dictionary = "afinn")
+dict_nrc <- get_sentiment_dictionary(dictionary = "nrc", lang = "english")
+
+#2: get values
+head(sent_syuzhet, n = 100)
+head(sent_bing, n = 100)
+head(sent_afinn, n = 100)
+head(sent_nrc, n = 100)
+
+#3: descriptive analysis
+mean(sent_syuzhet)
+summary(sent_syuzhet)
+mean(sent_afinn)
+summary(sent_afinn)
+
+plot(
+  sent_syuzhet, 
+  type="h", 
+  main="Example Plot of Speech", 
+  xlab = "Speech Time", 
+  ylab= "Emotional Valence"
+  )
+
+#4: nrc dictionary
+cat_nrc <- get_nrc_sentiment(stop_UNGD)
+angry_toks <- which(cat_nrc$anger>0)
+stop_UNGD[angry_toks]
+
+#table of categories in emotions
+pander::pandoc.table(cat_nrc[1:10, 1:8], split.table = Inf)
+
+#table of negative vs positive
+pander::pandoc.table(cat_nrc[1:10, 9:10], split.table = Inf)
+
+#graph of categories in emotions in percentages graph shows what kind of emotions they use in the first speech
+barplot(
+  sort(colSums(prop.table(cat_nrc[, 1:8]))), 
+  horiz = TRUE, 
+  cex.names = 0.7, 
+  las = 1, 
+  main = "Emotions in UN speech", xlab="Percentage"
+  )
+```
+
+```{r}
+head(HR_dfm)
+head(HR_dfm_total)
+```
+
+Data Frame of human rights variables in UNGDC
+
+```{r}
+#creating a data frame 
+Human.Rights_HR <- convert(HR_dfm_total, to = "data.frame")
+
+#converting documentID into two columns - country and year
+HR_counts <- Human.Rights_HR %>%
+  separate(document, c("country", "year"), "_")
+
+#year as numeric
+HR_counts$year <- as.numeric(HR_counts$year)
+head(HR_counts)
+HR_counts <- plyr::rename(HR_counts, c("human_rights_total"="HR"))
+```
+
+```{r}
+head(HR_counts)
+```
+
+
+```{r}
+#Merge total HR dictionary counts with the MergeNA_PTS_ungd_1976 data set
+
+colnames(HR_counts)[colnames(HR_counts)=="country"] <- "MergeCountry"
+colnames(HR_counts)[colnames(HR_counts)=="year"] <- "Year"
+head(HR_counts)
+
+colnames(merge_HHRRcounts)[colnames(merge_HHRRcounts)=="MergeCountry"] <- "MergeCountry"
+head(merge_HHRRcounts)
+
+merge_HHRRcounts %>%
+      group_by(MergeCountry) %>%
+      summarise(n = n())
+
+HR_counts %>%
+      group_by(MergeCountry) %>%
+      summarise(n = n())
+
+merge_HRdict_counts <- merge(merge_HHRRcounts, HR_counts, by = c('MergeCountry','Year'), all=TRUE)
+
+head(merge_HRdict_counts)
+#merged dataset with both dictionaries: HHRRterm and HRdict
+```
+
+
+#Sentiment Analysis Regression
+
+## Model 1. Relation between changes in PTS and sentiment of features within the bing (binary) sentiment dictionary in UNGD speeches
+
+Linear regression model between changes in PTS (State Department) and mentions of the "Human Rights" concept in UNGD speeches (1976 - 2018)
+
+```{r}
+Modelbing_S <- lm (HR ~ PTS_S + PTS_S_ch + PTS_S*PTS_S_ch, data = merge_HRdict_counts)
+screenreg(Modelbing_S)
+
+Modelbing_A <- lm (HR ~ PTS_A + PTS_A_ch + PTS_A*PTS_A_ch, data = merge_HRdict_counts)
+screenreg(Modelbing_A)
+
+Modelbing_H <- lm (HR ~ PTS_H + PTS_H_ch + PTS_H*PTS_H_ch, data = merge_HRdict_counts)
+screenreg(Modelbing_H)
+```
+
+#Sentiment Analysis Regression
+
+## Model 1 (baseline). Relation between changes in PTS and sentiment of features within the bing (binary) sentiment dictionary in UNGD speeches
+
+Linear regression model between changes in PTS (State Department) and mentions of the "Human Rights" concept in UNGD speeches (1976 - 2018)
+
+```{r}
+ModelHRdict_S <- lm (HR ~ PTS_S + PTS_S_ch + PTS_S*PTS_S_ch, data = merge_HRdict_counts)
+screenreg(ModelHRdict_S)
+
+ModelHRdict_A <- lm (HR ~ PTS_A + PTS_A_ch + PTS_A*PTS_A_ch, data = merge_HRdict_counts)
+screenreg(ModelHRdict_A)
+
+ModelHRdict_H <- lm (HR ~ PTS_H + PTS_H_ch + PTS_H*PTS_H_ch, data = merge_HRdict_counts)
+screenreg(ModelHRdict_H)
+```
+
+## Model 2(all sentiment dictionaries). Relation between changes in PTS and sentiment of features within the bing (binary) sentiment dictionary in UNGD speeches
+
+```{r}
 
 regression
 reg HHRR changeinPTS PTS_year PTS_year * changeinPTS, 
