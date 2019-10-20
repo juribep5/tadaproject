@@ -7,6 +7,22 @@ output: html_document
 
 ```{r setup, include=FALSE}
 library(zip)
+library(readtext)
+library(quanteda)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(ggplot2)
+library(rworldmap)
+library(RColorBrewer)
+library(haven)
+library(readxl)
+library(compareDF)
+library(foreign)
+library(texreg)
+library(lmtest)
+library(syuzhet)
+library(pander)
 ```
 
 ### PTS and UNGDC data
@@ -30,20 +46,6 @@ Using the code of the  The Lancet Countdown report: Nick Watts et al. (2018). "T
 
 #Loading data from the UNGDC data
 
-```{r message=FALSE}
-#Loading packages and data
-library(readtext)
-library(quanteda)
-library(dplyr)
-library(tidyr)
-library(stringr)
-library(ggplot2)
-library(rworldmap)
-library(RColorBrewer)
-library(haven)
-library(readxl)
-```
-
 ### UNGDC data
 ```{r}
 #Upload UNGDC data
@@ -60,23 +62,13 @@ ungd_files <- readtext(paste0(temp, "/Converted sessions/*"),
                        dvsep="_", 
                        docvarnames = c("Country", "Session", "Year"))
 
-head(ungd_files)
-
 ungd_files$doc_id <- str_replace(ungd_files$doc_id , ".txt", "") %>%
    str_replace(. , "_\\d{2}", "")
 
 unlink(temp)
-
 rm(temp)
-#rm(filelist)
-#rm(filenames)
 rm(urlungdc)
 ```
-
-```{r}
-head(ungd_files)
-```
-
 
 
 ### PTS data
@@ -105,12 +97,6 @@ PTS_2019<-mutate(PTS_2019,PTS_A_var= ifelse(PTS_A_ch>0,1,0))
 
 
 ### Merging the datasets UNGD and PTS
-
-```{r}
-install.packages("compareDF")
-
-library(compareDF)
-```
 
 ```{r}
 #compare years
@@ -143,9 +129,6 @@ merge_PTS_ungd1976 <- subset(merge_PTS_ungd, !merge_PTS_ungd$Year<1976)
 NA_PTS_ungd1976 <- subset(merge_PTS_ungd1976, is.na(merge_PTS_ungd1976$MergeCountry))
 
 mergeNA_PTS_ungd_1976 <- subset(merge_PTS_ungd1976, !is.na(merge_PTS_ungd1976$MergeCountry))
-
-head(mergeNA_PTS_ungd_1976)
-tail(mergeNA_PTS_ungd_1976)
 ```
 
 ```{r}
@@ -156,7 +139,6 @@ clean_PTS_ungd1976 <- subset(mergeNA_PTS_ungd_1976, !is.na(mergeNA_PTS_ungd_1976
 ##Creating corpus object: clean ungd merged corpus for regression analysis
 ```{r}
 ungd_corpus <- corpus(clean_PTS_ungd1976, text_field = "text") 
-
 # ungdc.1990 <- corpus_subset(ungd_corpus, Year>1990)
 ```
 
@@ -166,7 +148,6 @@ Tokenizing corpus.
 
 ```{r}
 #Tokenization and basic pre-processing
-
 toks_UNGD <- tokens(ungd_corpus, what = "word",
               remove_punct = TRUE,
               remove_symbols = TRUE,
@@ -184,11 +165,6 @@ lower_UNGD <- tokens_tolower(toks_UNGD)
 stop_UNGD <- tokens_select(lower_UNGD, stopwords("english"), selection = "remove", padding = FALSE)
 
 ngram_UNGD <- tokens(stop_UNGD, ngrams = c(1:2), include_docvars = TRUE)
-head(ngram_UNGD)
-```
-
-```{r}
-#head(lower_UNGD)
 ```
 
 #Dictionary Analysis HR binary
@@ -201,10 +177,6 @@ listHHRR <- list( c("Human", "Rights"))
 ```
 
 ```{r}
-listHHRR
-```
-
-```{r}
 compound_UNGD_HHRR <- tokens_compound(lower_UNGD, listHHRR, valuetype = "fixed", concatenator = "_")
 ```
 
@@ -212,7 +184,6 @@ Creating a Dictionary of Human Rights, in order to identify the frequency of the
 
 ```{r}
 HHRR_dict <- dictionary(list(Human.Rights=c("Human Rights")))
-HHRR_dict
 ```
 
 ## Look up Human Rights term counts
@@ -224,10 +195,6 @@ Looking up and counting the frequency of usage of "Human Rights" in the UN GA sp
 ```{r}
 dfm_UNGD_HHRR <- dfm(compound_UNGD_HHRR)
 HHRR_dfm <- dfm_lookup(dfm_UNGD_HHRR, HHRR_dict, valuetype = "fixed")
-```
-
-```{r}
-head(HHRR_dfm)
 ```
 
 Data Frame of human rights variables in UNGDC
@@ -245,20 +212,14 @@ HHRR_counts$year <- as.numeric(HHRR_counts$year)
 HHRR_counts <- plyr::rename(HHRR_counts, c("Human.Rights"="HHRR"))
 ```
 
-```{r}
-head(HHRR_counts)
-```
-
 
 ```{r}
 #Merge HHRR counts with the MergeNA_PTS_ungd_1976 data set
 
 colnames(HHRR_counts)[colnames(HHRR_counts)=="country"] <- "MergeCountry"
 colnames(HHRR_counts)[colnames(HHRR_counts)=="year"] <- "Year"
-head(HHRR_counts)
 
 colnames(clean_PTS_ungd1976)[colnames(clean_PTS_ungd1976)=="MergeCountry"] <- "MergeCountry"
-head(clean_PTS_ungd1976)
 
 clean_PTS_ungd1976 %>%
       group_by(MergeCountry) %>%
@@ -269,26 +230,12 @@ HHRR_counts %>%
       summarise(n = n())
 
 merge_HHRRcounts <- merge(clean_PTS_ungd1976, HHRR_counts, by = c('MergeCountry','Year'), all=TRUE)
-
-head(merge_HHRRcounts)
 ```
 
 
 #Baseline
 
 ## Model 1. Relation between changes in PTS and mentions of the "Human Rights" concept in UNGD speeches
-
-```{r}
-install.packages("texreg")
-install.packages("lmtest")
-```
-
-
-```{r}
-library(foreign)
-library(texreg)
-library(lmtest)
-```
 
 Linear regression model between changes in PTS (State Department) and mentions of the "Human Rights" concept in UNGD speeches (1976 - 2018)
 
@@ -354,7 +301,6 @@ HRdict <- c(dict_HRGreene["human_rightsG"], dict_HRFariss["human_rightsF"], dict
 
 #one complete dictionary
 HRdict_total <- dictionary(list(human_rights_total = c("kill", "forc", "arm", "group", "civilian", "human", "secur", "disappear", "attack", "execut" , "tortur", "member", "includ", "arrest", "prison", "polit", "amnesti", "trial", "releas", "imprison", "sentenc", "charg", "conscience", "polic", "offic", "illtreat", "death", "court", "alleg", "law", "service", "concern", "appeal", "servic", "committee", "militari", "area", "continu", "section", "state", "dure", "arrest", "offici", "presid", "opposit", "parti", "author", "law", "provid", "gener", "public", "constitut", "employ", "women", "right", "respect", "freedom", "prohibit", "case", "ngo", "tortur", "gener", "labor", "detain", "releas", "elect", "local", "presidenti", "region", "mani", "regim", "nation", "ethnic", "union", "practic", "work", "foreign", "children", "investig", "relig", "islam", "roma", "worker", "traffic", "feder", "parliament", "commit", "victim", "popul", "scale", "armi", "command", "conscript", "assassin", "massacr", "intern_displac", "food", "humanitarian", "landmin", "money", "rape", "disappear", "widespread", "systemat", "extens", "human_rights", "violat", "race", "dignit", "protect", "citizen", "educat", "child", "refugee", "communit", "people", "responsibl", "health", "world")))
-
 ```
 
 #Dictionary Analysis HR binary
@@ -380,11 +326,6 @@ HR_dfm_total <- dfm_lookup(dfm_UNGD_HR, HRdict_total, valuetype = "fixed")
 
 ```
 
-```{r}
-head(HR_dfm)
-head(HR_dfm_total)
-```
-
 Data Frame of human rights variables in UNGDC
 
 ```{r}
@@ -397,13 +338,9 @@ HR_counts <- Human.Rights_HR %>%
 
 #year as numeric
 HR_counts$year <- as.numeric(HR_counts$year)
-head(HR_counts)
 HR_counts <- plyr::rename(HR_counts, c("human_rights_total"="HR"))
 ```
 
-```{r}
-head(HR_counts)
-```
 
 
 ```{r}
@@ -411,10 +348,8 @@ head(HR_counts)
 
 colnames(HR_counts)[colnames(HR_counts)=="country"] <- "MergeCountry"
 colnames(HR_counts)[colnames(HR_counts)=="year"] <- "Year"
-head(HR_counts)
 
 colnames(merge_HHRRcounts)[colnames(merge_HHRRcounts)=="MergeCountry"] <- "MergeCountry"
-head(merge_HHRRcounts)
 
 merge_HHRRcounts %>%
       group_by(MergeCountry) %>%
@@ -450,18 +385,6 @@ screenreg(ModelHRdict_H)
 
 
 ###Hypothesis 2: sentiment dictionary analysis
-
-### add Syuzhet dictionary (#added from Nina branch)
-
-```{r}
-install.packages("syuzhet")
-install.packages("devtools")
-install.packages("pander")
-devtools::install_github("mjockers/syuzhet")
-1
-library(syuzhet)
-library(pander)
-```
 
 ```{r}
 #get sentiment analysis with four different dictionaries: syuzhet (1), afinn, bing, and nrc
@@ -518,10 +441,6 @@ barplot(
   )
 ```
 
-```{r}
-head(HR_dfm)
-head(HR_dfm_total)
-```
 
 Data Frame of human rights variables in UNGDC
 
@@ -535,12 +454,7 @@ HR_counts <- Human.Rights_HR %>%
 
 #year as numeric
 HR_counts$year <- as.numeric(HR_counts$year)
-head(HR_counts)
 HR_counts <- plyr::rename(HR_counts, c("human_rights_total"="HR"))
-```
-
-```{r}
-head(HR_counts)
 ```
 
 
@@ -549,10 +463,8 @@ head(HR_counts)
 
 colnames(HR_counts)[colnames(HR_counts)=="country"] <- "MergeCountry"
 colnames(HR_counts)[colnames(HR_counts)=="year"] <- "Year"
-head(HR_counts)
 
 colnames(merge_HHRRcounts)[colnames(merge_HHRRcounts)=="MergeCountry"] <- "MergeCountry"
-head(merge_HHRRcounts)
 
 merge_HHRRcounts %>%
       group_by(MergeCountry) %>%
