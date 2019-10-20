@@ -6,23 +6,25 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-library(zip)
-library(readtext)
-library(quanteda)
-library(dplyr)
-library(tidyr)
-library(stringr)
-library(ggplot2)
-library(rworldmap)
-library(RColorBrewer)
-library(haven)
-library(readxl)
 library(compareDF)
+library(dplyr)
 library(foreign)
-library(texreg)
+library(ggplot2)
+library(haven)
 library(lmtest)
-library(syuzhet)
 library(pander)
+library(plm)
+library(quanteda)
+library(readtext)
+library(readxl)
+library(RColorBrewer)
+library(rworldmap)
+library(stargazer)
+library(stringr)
+library(syuzhet)
+library(texreg)
+library(tidyr)
+library(zip)
 ```
 
 ### PTS and UNGDC data
@@ -323,7 +325,6 @@ dfm_UNGD_HR <- dfm(compound_UNGD_HRlist)
 HR_dfm <- dfm_lookup(dfm_UNGD_HR, HRdict, valuetype = "fixed")
 #total dict
 HR_dfm_total <- dfm_lookup(dfm_UNGD_HR, HRdict_total, valuetype = "fixed")
-
 ```
 
 Data Frame of human rights variables in UNGDC
@@ -523,5 +524,293 @@ regression
 reg HHRR changeinPTS PTS_year PTS_year * changeinPTS, 
 reg HHRR changeinPTS PTS_year PTS_year * changeinPTS, clustered errors
 reg HHRR changeinPTS PTS_year PTS_year * changeinPTS, time-fixed effects, country-fixed effects, clustered errors
+```
 
+
+
+```{r}
+#HHRR
+merge_HRdict_counts1<-merge_HRdict_counts %>% 
+                      subset(!is.na(Region)) %>% 
+                      group_by(Region,Year) %>%
+                      summarise_at("HHRR",funs(mean(., na.rm=TRUE)))
+merge_HRdict_counts1$Region<-factor(merge_HRdict_counts1$Region, labels=c("East Asia and Pacific","Europe and Central Asia", "Latin America and Caribbean", "Middle East and North Africa","North America","South Asia","Sub-Saharan Africa" ),levels=c("eap","eca","lac","mena","na","sa","ssa"))
+
+levels(merge_HRdict_counts1$Region)
+
+ggplot(merge_HRdict_counts1,aes(x=Year,y=HHRR, color=Region))+
+  geom_line()
+
+
+
+#HR
+merge_HRdict_counts2<-merge_HRdict_counts %>% 
+                      subset(!is.na(Region)) %>% 
+                      group_by(Region,Year) %>%
+                      summarise_at("HR",funs(mean(., na.rm=TRUE)))
+merge_HRdict_counts2$Region<-factor(merge_HRdict_counts2$Region, labels=c("East Asia and Pacific","Europe and Central Asia", "Latin America and Caribbean", "Middle East and North Africa","North America","South Asia","Sub-Saharan Africa" ),levels=c("eap","eca","lac","mena","na","sa","ssa"))
+ggplot(merge_HRdict_counts2,aes(x=Year,y=HR, color=Region))+
+  geom_line()
+
+
+#hhrr pts 1-3
+merge_HRdict_counts3<-merge_HRdict_counts %>% 
+                      subset(PTS_A<4) %>% 
+                      group_by(Region,Year) %>%
+                      summarise_at("HHRR",funs(mean(., na.rm=TRUE)))
+merge_HRdict_counts3$Region<-factor(merge_HRdict_counts3$Region, labels=c("East Asia and Pacific","Europe and Central Asia", "Latin America and Caribbean", "Middle East and North Africa","North America","South Asia","Sub-Saharan Africa" ),levels=c("eap","eca","lac","mena","na","sa","ssa"))
+
+g_merge_HRdict_counts3<-ggplot(merge_HRdict_counts3,aes(x=Year,y=HHRR,color=Region))+
+geom_line()+
+  scale_y_continuous(limits = c(0, 20), breaks=seq(0,20,5),expand = c(0, 0))+
+  scale_x_continuous(limits = c(1976, 2018), breaks=seq(1976,2018,7),expand = c(0, 0))+
+labs(title="Average count of words related to Human Rights in UN speeches", 
+       subtitle="Countries with PTS score of 1 to 3 grouped by region", 
+       caption="*Information based in speeches at the UN General Assembly and PTS of Amnesty International", 
+       y="Human-Right Count",
+       x="Year")+
+  theme(axis.line = element_line(colour = 'black'),
+        panel.grid.major = element_line(colour = 'gray'),
+        panel.grid.minor = element_line(colour = 'gray'),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 16,hjust = 0.5),
+        plot.subtitle = element_text(size = 12,hjust = 0.5),
+        plot.margin = unit(c(0.5,0.5,0.5,0.5), "cm"),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12),
+        plot.caption = element_text(size = 8,hjust = 0,margin=margin(t=10)),
+        legend.position="bottom",
+        legend.title = element_text(size = 11),
+        legend.justification = "center",
+        legend.spacing = unit(5.0, 'cm'),
+        legend.text=element_text(size=10))
+
+
+
+#hhrr pts =4&5
+merge_HRdict_counts31<-merge_HRdict_counts %>% 
+                      subset(PTS_A>3) %>% 
+                      group_by(Region,Year) %>%
+                      summarise_at("HHRR",funs(mean(., na.rm=TRUE)))
+merge_HRdict_counts31$Region<-factor(merge_HRdict_counts31$Region, labels=c("East Asia and Pacific","Europe and Central Asia", "Latin America and Caribbean", "Middle East and North Africa","North America","South Asia","Sub-Saharan Africa" ),levels=c("eap","eca","lac","mena","na","sa","ssa"))
+
+g_merge_HRdict_counts31<-ggplot(merge_HRdict_counts31,aes(x=Year,y=HHRR,color=Region))+
+geom_line()+
+  scale_y_continuous(limits = c(0, 20), breaks=seq(0,20,5),expand = c(0, 0))+
+  scale_x_continuous(limits = c(1976, 2018), breaks=seq(1976,2018,7),expand = c(0, 0))+
+labs(title="Average count of words related to Human Rights in UN speeches", 
+       subtitle="Countries with PTS score of 4 & 5 grouped by region", 
+       caption="*Information based in speeches at the UN General Assembly and PTS of Amnesty International", 
+       y="Human-Right Count",
+       x="Year")+
+  theme(axis.line = element_line(colour = 'black'),
+        panel.grid.major = element_line(colour = 'gray'),
+        panel.grid.minor = element_line(colour = 'gray'),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 16,hjust = 0.5),
+        plot.subtitle = element_text(size = 12,hjust = 0.5),
+        plot.margin = unit(c(0.5,0.5,0.5,0.5), "cm"),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12),
+        plot.caption = element_text(size = 8,hjust = 0,margin=margin(t=10)),
+        legend.position="bottom",
+        legend.title = element_text(size = 11),
+        legend.justification = "center",
+        legend.spacing = unit(5.0, 'cm'),
+        legend.text=element_text(size=10))
+
+
+#hr pts =1-3
+merge_HRdict_counts4<-merge_HRdict_counts %>% 
+                      subset(PTS_A<4) %>% 
+                      group_by(Region,Year) %>%
+                      summarise_at("HR",funs(mean(., na.rm=TRUE)))
+merge_HRdict_counts4$Region<-factor(merge_HRdict_counts4$Region, labels=c("East Asia and Pacific","Europe and Central Asia", "Latin America and Caribbean", "Middle East and North Africa","North America","South Asia","Sub-Saharan Africa" ),levels=c("eap","eca","lac","mena","na","sa","ssa"))
+
+g_merge_HRdict_counts4<-ggplot(merge_HRdict_counts4,aes(x=Year,y=HR,color=Region))+
+  geom_line()+
+  scale_y_continuous(limits = c(0, 140), breaks=seq(0,140,35),expand = c(0, 0))+
+  scale_x_continuous(limits = c(1976, 2018), breaks=seq(1976,2018,7),expand = c(0, 0))+
+labs(title="Average count of words related to Human Rights in UN speeches", 
+       subtitle="Countries with PTS score of 1 to 3 grouped by region", 
+       caption="*Information based in speeches at the UN General Assembly and PTS of of Amnesty International", 
+       y="Dictionary Count",
+       x="Year")+
+  theme(axis.line = element_line(colour = 'black'),
+        panel.grid.major = element_line(colour = 'gray'),
+        panel.grid.minor = element_line(colour = 'gray'),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 16,hjust = 0.5),
+        plot.subtitle = element_text(size = 12,hjust = 0.5),
+        plot.margin = unit(c(0.5,0.5,0.5,0.5), "cm"),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12),
+        plot.caption = element_text(size = 8,hjust = 0,margin=margin(t=10)),
+        legend.position="bottom",
+        legend.title = element_text(size = 11),
+        legend.justification = "center",
+        legend.spacing = unit(5.0, 'cm'),
+        legend.text=element_text(size=10))
+
+#hr pts =4&5
+merge_HRdict_counts41<-merge_HRdict_counts %>% 
+                      subset(PTS_A>3) %>% 
+                      group_by(Region,Year) %>%
+                      summarise_at("HR",funs(mean(., na.rm=TRUE)))
+merge_HRdict_counts41$Region<-factor(merge_HRdict_counts41$Region, labels=c("East Asia and Pacific","Europe and Central Asia", "Latin America and Caribbean", "Middle East and North Africa","North America","South Asia","Sub-Saharan Africa" ),levels=c("eap","eca","lac","mena","na","sa","ssa"))
+
+g_merge_HRdict_counts41<-ggplot(merge_HRdict_counts41,aes(x=Year,y=HR,color=Region))+
+  geom_line()+
+  scale_y_continuous(limits = c(0, 140), breaks=seq(0,140,35),expand = c(0, 0))+
+  scale_x_continuous(limits = c(1976, 2018), breaks=seq(1976,2018,7),expand = c(0, 0))+
+labs(title="Average count of words related to Human Rights in UN speeches", 
+       subtitle="Countries with PTS score of 4 & 5 grouped by region", 
+       caption="*Information based in speeches at the UN General Assembly and PTS of Amnesty International", 
+       y="Dictionary Count",
+       x="Year")+
+  theme(axis.line = element_line(colour = 'black'),
+        panel.grid.major = element_line(colour = 'gray'),
+        panel.grid.minor = element_line(colour = 'gray'),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 16,hjust = 0.5),
+        plot.subtitle = element_text(size = 12,hjust = 0.5),
+        plot.margin = unit(c(0.5,0.5,0.5,0.5), "cm"),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12),
+        plot.caption = element_text(size = 8,hjust = 0,margin=margin(t=10)),
+        legend.position="bottom",
+        legend.title = element_text(size = 11),
+        legend.justification = "center",
+        legend.spacing = unit(5.0, 'cm'),
+        legend.text=element_text(size=10))
+
+
+merge_HRdict_counts5<-merge_HRdict_counts %>% 
+                      subset(PTS_S>3) %>% 
+                      group_by(Year) %>%
+                      summarise_at("HR",funs(mean(., na.rm=TRUE)))
+
+merge_HRdict_counts51<-merge_HRdict_counts %>% 
+                      subset(PTS_S<4) %>% 
+                      group_by(Year) %>%
+                      summarise_at("HR",funs(mean(., na.rm=TRUE)))
+
+
+ggplot(NULL,aes(x=Year,y=HR))+
+    geom_line(data=merge_HRdict_counts51, color="green")+
+  geom_line(data=merge_HRdict_counts5)
+
+summary(merge_HRdict_counts5)
+summary(merge_HRdict_counts51)
+
+
+```
+
+
+
+```{r}
+merge_HHRRcounts$PTS_S_dummy <- factor(merge_HHRRcounts$PTS_S)
+is.factor(merge_HHRRcounts$PTS_S_dummy)
+
+merge_HHRRcounts$PTS_A_dummy <- factor(merge_HHRRcounts$PTS_A)
+is.factor(merge_HHRRcounts$PTS_A_dummy)
+
+merge_HHRRcounts$PTS_H_dummy <- factor(merge_HHRRcounts$PTS_H)
+is.factor(merge_HHRRcounts$PTS_H_dummy)
+
+ModelHHRR_S <- lm (HHRR ~ PTS_S_dummy + factor(PTS_S_var) + PTS_S_dummy*factor(PTS_S_var), data = merge_HHRRcounts)
+screenreg(ModelHHRR_S)
+#PTS_S significant and negative
+
+ModelHHRR_A <- lm (HHRR ~ factor(PTS_A) + PTS_A_var + factor(PTS_A)*PTS_A_var, data = merge_HHRRcounts)
+screenreg(ModelHHRR_A)
+
+ModelHHRR_A <- lm (HHRR ~ factor(PTS_A) + factor(PTS_A_var) + factor(PTS_A)*factor(PTS_A_var), data = merge_HHRRcounts)
+
+names(merge_HHRRcounts)
+#PTS_A significant and negative
+
+ModelHHRR_H <- lm (HHRR ~ PTS_H_dummy + factor(PTS_H_var) + PTS_H_dummy*factor(PTS_H_var), data = merge_HHRRcounts)
+screenreg(ModelHHRR_H)
+summary(ModelHHRR_S)
+#PTS_H insignificant
+
+
+
+```
+
+
+```{r}
+#regression with fixed effects
+install.packages("plm")
+library(plm)
+str(merge_HHRRcounts)
+
+ModelHHRR_S_fe <- plm (HHRR ~ PTS_S_dummy + factor(PTS_S_var) + PTS_S_dummy*factor(PTS_S_var), data = merge_HHRRcounts, index = c("MergeCountry", "Year"), effect = "twoways", model = "within")
+screenreg(ModelHHRR_S_fe)
+summary(ModelHHRR_S_fe)
+
+#resulting duplicate couples
+table(index(merge_HHRRcounts), useNA = "ifany")
+
+#PTS_S significant and negative
+ModelHHRR_A_fe <- plm (HHRR ~ PTS_A_dummy + factor(PTS_A_var) + PTS_A_dummy*factor(PTS_A_var), data = merge_HHRRcounts, effect = "twoways", model = "within")
+screenreg(ModelHHRR_A_fe)
+
+#PTS_A significant and negative
+ModelHHRR_H_fe <- plm (HHRR ~ PTS_H_dummy + factor(PTS_H_var) + PTS_H_dummy*factor(PTS_H_var), data = merge_HHRRcounts, effect = "twoways", model = "within")
+screenreg(ModelHHRR_H_fe)
+```
+
+
+
+```{r}
+
+ModelHHRR_A <- lm (HHRR ~ factor(PTS_A) + factor(PTS_A_var) + factor(PTS_A)*factor(PTS_A_var), data = merge_HHRRcounts)
+
+ModelHRdict_A <- lm (HR ~ factor(PTS_A) + factor(PTS_A_var) + factor(PTS_A)*factor(PTS_A_var), data = merge_HRdict_counts)
+screenreg(ModelHRdict_A_feHHRR)
+names(ModelHRdict_A_fe)
+
+
+ModelHRdict_A_feHR <- plm (HR ~ factor(PTS_A) + PTS_A_var + factor(PTS_A)*PTS_A_var, data = merge_HRdict_counts, effect = "twoway", model = "within")
+
+ModelHRdict_A_feHHRR <- plm (HHRR ~ factor(PTS_A) + PTS_A_var + factor(PTS_A)*PTS_A_var, data = merge_HRdict_counts, effect = "twoway", model = "within")
+
+```
+
+
+```{r}
+
+ModelHR_A <- lm (HR ~ factor(PTS_A) + PTS_A_var + factor(PTS_A)*PTS_A_var, data = merge_HRdict_counts)
+
+stargazer(ModelHR_A, ModelHRdict_A_feHR, ModelHHRR_A, ModelHRdict_A_feHHRR,
+          align=TRUE,
+          type = 'latex',
+          column.sep.width = "3 pt",
+          omit.stat=c("LL","ser","f","adj.rsq"),
+          title= "OLS and two-way fixed effects models-Effect PTS AI on HR mentions",
+          covariate.labels = c("PTS=2", "PTS=3","PTS=4","PTS=5","VPTS","PTS=2*VPTS", "PTS=3*VPTS","PTS=4*VPTS","", "Constant"))
+          
+          
+library(stargazer)
+stargazer(ModelHHRR_S, ModelHHRR_A, ModelHHRR_H,
+          align=TRUE,
+          type = 'text',
+          covariate.labels = c("a","s","d","f","g","h","j","k"),
+          column.sep.width = "10pt",
+          title= "Table 1. OLS regression - Effect of Barcenas scandal on trust in police",
+          dep.var.labels = "Trust in Police")
+          model.names = FALSE, 
+          column.labels = c("Amnesty International", "State Department","Human Rights Watch"),
+          model.numbers = FALSE,
+          omit.stat=c("LL","ser","f","adj.rsq"	),
+          star.char = c("*","**","***"),
+          star.cutoffs = c(0.05,0.01,0.001),
+          covariate.labels = c("D (Exposure to the Bárcenas scandal)", "Constant"))
+```
 
