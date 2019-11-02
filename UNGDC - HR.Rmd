@@ -25,6 +25,15 @@ library(syuzhet)
 library(texreg)
 library(tidyr)
 library(zip)
+library(tibble)
+#install.packages("tidytext")
+#install.packages("tidyverse")
+library(tidytext)
+library(tidyverse)
+library(glue)
+library(remotes)
+install_github("EmilHvitfeldt/textdata")
+install_github("juliasilge/tidytext")
 ```
 
 ### PTS and UNGDC data
@@ -131,16 +140,23 @@ merge_PTS_ungd1976 <- subset(merge_PTS_ungd, !merge_PTS_ungd$Year<1976)
 NA_PTS_ungd1976 <- subset(merge_PTS_ungd1976, is.na(merge_PTS_ungd1976$MergeCountry))
 
 mergeNA_PTS_ungd_1976 <- subset(merge_PTS_ungd1976, !is.na(merge_PTS_ungd1976$MergeCountry))
+
+tail(mergeNA_PTS_ungd_1976)
+head(NA_PTS_ungd1976,20)
+tail(NA_PTS_ungd1976)
+#there are 11 countries which we have to delete due to non-existing data in the text corpus
 ```
 
 ```{r}
 #Deleting NAs in the text - speeches rows from the "mergeNA_PTS_ungd_1976"
 clean_PTS_ungd1976 <- subset(mergeNA_PTS_ungd_1976, !is.na(mergeNA_PTS_ungd_1976$text))
+head(clean_PTS_ungd1976)
+tail(clean_PTS_ungd1976)
 ```
 
 ##Creating corpus object: clean ungd merged corpus for regression analysis
 ```{r}
-ungd_corpus <- corpus(clean_PTS_ungd1976, text_field = "text") 
+clean_ungd_corpus <- corpus(clean_PTS_ungd1976, text_field = "text") 
 # ungdc.1990 <- corpus_subset(ungd_corpus, Year>1990)
 ```
 
@@ -150,7 +166,7 @@ Tokenizing corpus.
 
 ```{r}
 #Tokenization and basic pre-processing
-toks_UNGD <- tokens(ungd_corpus, what = "word",
+clean_toks_UNGD <- tokens(clean_ungd_corpus, what = "word",
               remove_punct = TRUE,
               remove_symbols = TRUE,
               remove_numbers = TRUE,
@@ -162,13 +178,14 @@ toks_UNGD <- tokens(ungd_corpus, what = "word",
 ```
 
 ```{r}
-lower_UNGD <- tokens_tolower(toks_UNGD)
+lower_UNGD <- tokens_tolower(clean_toks_UNGD)
 
 stop_UNGD <- tokens_select(lower_UNGD, stopwords("english"), selection = "remove", padding = FALSE)
 
 ngram_UNGD <- tokens(stop_UNGD, ngrams = c(1:2), include_docvars = TRUE)
 ```
 
+##################################################################
 #Dictionary Analysis HR binary
 ## 1. Identifying the frequency of usage of "Human Rights" in UN Speeches
 
@@ -342,8 +359,6 @@ HR_counts$year <- as.numeric(HR_counts$year)
 HR_counts <- plyr::rename(HR_counts, c("human_rights_total"="HR"))
 ```
 
-
-
 ```{r}
 #Merge total HR dictionary counts with the MergeNA_PTS_ungd_1976 data set
 
@@ -384,34 +399,150 @@ ModelHRdict_H <- lm (HR ~ PTS_H + PTS_H_ch + PTS_H*PTS_H_ch, data = merge_HRdict
 screenreg(ModelHRdict_H)
 ```
 
-
+################################################################
 ###Hypothesis 2: sentiment dictionary analysis
 
 ```{r}
 #get sentiment analysis with four different dictionaries: syuzhet (1), afinn, bing, and nrc
 
-#1: Create vectors for the sentiment dictionaries: syuzhet is mixed, bing is binary neg/pos, afinn is a scale and nrc has different emptional categories
-sent_syuzhet <- get_sentiment(stop_UNGD, method ="syuzhet")
-sent_afinn <- get_sentiment(stop_UNGD, method ="afinn")
-sent_bing <- get_sentiment(stop_UNGD, method ="bing")
-sent_nrc <- get_sentiment(stop_UNGD, method ="nrc", lang = "english")
+#tokenise with tidytext
 
-dict_bing <- get_sentiment_dictionary(dictionary = "bing")
-dict_syuzhet <- get_sentiment_dictionary(dictionary = "syuzhet")
-dict_afinn <- get_sentiment_dictionary(dictionary = "afinn")
-dict_nrc <- get_sentiment_dictionary(dictionary = "nrc", lang = "english")
+sent_words <- clean_PTS_ungd1976 %>%
+  group_by(MergeCountry) %>%
+  ungroup() %>%
+  unnest_tokens(word, text)
 
-#2: get values
-head(sent_syuzhet, n = 100)
-head(sent_bing, n = 100)
-head(sent_afinn, n = 100)
-head(sent_nrc, n = 100)
+sent_words_lim <- subset(sent_words, select = c(Year, MergeCountry, PTS_A, PTS_A_var, Session, word))
+sent_words_lim
 
-#3: descriptive analysis
-mean(sent_syuzhet)
-summary(sent_syuzhet)
-mean(sent_afinn)
-summary(sent_afinn)
+#find total number of words
+wordstotal <- sent_words_lim %>%
+  count(MergeCountry)
+wordstotal$total<-wordstotal$n
+wordstotal<-wordstotal[,c("MergeCountry", "total")]
+wordstotal
+
+```
+### Add sentiment dictionaries and dictionary counts
+
+```{r}
+#negative sentiment - bing
+sentiment_plotn <-
+  sent_words_lim %>%
+  inner_join(get_sentiments("bing")) %>% 
+  filter(sentiment == "negative") %>%
+  count(Year, MergeCountry, sentiment)
+
+library(ggplot2)
+
+ggplot(sentiment_plotn, aes(x=Year, y=n))+
+  geom_smooth(color="blue")+
+  geom_point(color="red")
+  theme_minimal()+
+  ylab("Frequency of Negative Words in UN speeches")+
+  xlab("Year")
+
+#positive emotions UN speeches - bing
+
+sentiment_plotp <-
+  sent_words_lim %>%
+  inner_join(get_sentiments("bing")) %>% 
+  filter(sentiment == "positive") %>%
+  count(Year, MergeCountry, sentiment)
+
+ggplot(sentiment_plotp, aes(x=as.numeric(Year), y=n))+
+  geom_smooth(color="red")+
+  geom_point(color="blue")+
+  theme_minimal()+
+  ylab("Frequency of Positive Words in UN speeches")+
+  xlab("Year")
+
+###no sentiment filter - bing
+count_UNGDsentiment_bing <-
+  sent_words_lim %>%
+  inner_join(get_sentiments("bing")) %>% 
+  count(Year, MergeCountry, sentiment)
+
+count_UNGDsentiment_bing
+
+
+##afinn
+count_UNGDsentiment_afinn <- sent_words_lim %>% 
+  inner_join(get_sentiments("afinn")) %>%
+  group_by(MergeCountry, Year) %>%
+  count (Year, MergeCountry, value) %>%
+  mutate(method = "AFINN") 
+
+count_UNGDsentiment_afinn
+
+#count sentiment dictionary nrc
+count_UNGDsentiment_nrc <- sent_words_lim %>%
+  inner_join(get_sentiments("nrc")) %>%
+  group_by(MergeCountry, Year) %>%
+  count (Year, MergeCountry, sentiment) %>%
+  mutate(method = "nrc")
+
+count_UNGDsentiment_nrc
+
+```
+
+#play with subsets
+
+```{r}
+##bing
+bing <- sent_words_lim %>% 
+  filter(MergeCountry == "USA") %>%
+  inner_join(get_sentiments("bing")) %>% 
+  group_by(MergeCountry) %>% 
+  mutate(method = "BING")
+bing
+
+##nrc
+nrc_anger <- get_sentiments("nrc") %>% 
+  filter(sentiment == "anger")
+
+sent_words_lim %>%
+  filter(MergeCountry == "USA") %>%
+  inner_join(nrc_anger) %>%
+  count(word, sort = TRUE)
+
+```
+
+```{r}
+#Merge sentiment dictionaries with the MergeNA_PTS_ungd_1976 data set
+
+head(merge_HRdict_counts)
+#merged dataset with both dictionaries: HHRRterm and HRdict
+
+colnames(count_UNGDsentiment_bing)[colnames(count_UNGDsentiment_bing)=="sentiment"] <- "sentiment_bing"
+colnames(count_UNGDsentiment_bing)[colnames(count_UNGDsentiment_bing)=="n"] <- "n_bing"
+
+head(count_UNGDsentiment_afinn)
+head(count_UNGDsentiment_bing)
+head(count_UNGDsentiment_nrc)
+#merging variables are names the same
+
+merge_sentiment_counts1 <- merge(merge_HRdict_counts, count_UNGDsentiment_bing, by = c('MergeCountry','Year'), all=TRUE)
+head(merge_sentiment_counts1)
+
+```
+
+
+
+
+
+```{r}
+#create dfm with clean tokenized text
+clean_dfm_UNGD <- dfm(clean_toks_UNGD) 
+tbl_UNGD <- convert(clean_dfm_UNGD, to = "data.frame")
+
+#dict_bing <- get_sentiment_dictionary(dictionary = "bing")
+#dict_syuzhet <- get_sentiment_dictionary(dictionary = "syuzhet")
+#dict_afinn <- get_sentiment_dictionary(dictionary = "afinn")
+#dict_nrc <- get_sentiment_dictionary(dictionary = "nrc", lang = "english")
+#data_dictionary_AFINN
+#sent_bing <- get_sentiment(clean_toks_UNGD[1], method = "bing", lexicon = dict_bing)
+
 
 plot(
   sent_syuzhet, 
@@ -420,11 +551,6 @@ plot(
   xlab = "Speech Time", 
   ylab= "Emotional Valence"
   )
-
-#4: nrc dictionary
-cat_nrc <- get_nrc_sentiment(stop_UNGD)
-angry_toks <- which(cat_nrc$anger>0)
-stop_UNGD[angry_toks]
 
 #table of categories in emotions
 pander::pandoc.table(cat_nrc[1:10, 1:8], split.table = Inf)
