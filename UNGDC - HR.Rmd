@@ -411,16 +411,18 @@ sent_words <- clean_PTS_ungd1976 %>%
   group_by(MergeCountry) %>%
   ungroup() %>%
   unnest_tokens(word, text)
+#head(sent_words)
 
 sent_words_lim <- subset(sent_words, select = c(Year, MergeCountry, PTS_A, PTS_A_var, Session, word))
 sent_words_lim
 
-#find total number of words
+#find total number of words per country per year in speech 
 wordstotal <- sent_words_lim %>%
-  count(MergeCountry)
+  count(MergeCountry, Year)
 wordstotal$total<-wordstotal$n
-wordstotal<-wordstotal[,c("MergeCountry", "total")]
+wordstotal<-wordstotal[,c("MergeCountry", "Year", "total")]
 wordstotal
+
 
 ```
 ### Add sentiment dictionaries and dictionary counts
@@ -437,7 +439,7 @@ library(ggplot2)
 
 ggplot(sentiment_plotn, aes(x=Year, y=n))+
   geom_smooth(color="blue")+
-  geom_point(color="red")
+  geom_point(color="red")+
   theme_minimal()+
   ylab("Frequency of Negative Words in UN speeches")+
   xlab("Year")
@@ -490,12 +492,12 @@ count_UNGDsentiment_nrc
 
 ```{r}
 ##bing
-bing <- sent_words_lim %>% 
+bing_ex <- sent_words_lim %>% 
   filter(MergeCountry == "USA") %>%
   inner_join(get_sentiments("bing")) %>% 
   group_by(MergeCountry) %>% 
   mutate(method = "BING")
-bing
+bing_ex
 
 ##nrc
 nrc_anger <- get_sentiments("nrc") %>% 
@@ -516,14 +518,31 @@ head(merge_HRdict_counts)
 
 colnames(count_UNGDsentiment_bing)[colnames(count_UNGDsentiment_bing)=="sentiment"] <- "sentiment_bing"
 colnames(count_UNGDsentiment_bing)[colnames(count_UNGDsentiment_bing)=="n"] <- "n_bing"
-
-head(count_UNGDsentiment_afinn)
 head(count_UNGDsentiment_bing)
-head(count_UNGDsentiment_nrc)
+
 #merging variables are names the same
 
 merge_sentiment_counts1 <- merge(merge_HRdict_counts, count_UNGDsentiment_bing, by = c('MergeCountry','Year'), all=TRUE)
 head(merge_sentiment_counts1)
+
+
+##afinn
+head(count_UNGDsentiment_afinn)
+colnames(count_UNGDsentiment_afinn)[colnames(count_UNGDsentiment_afinn)=="method"] <- "method_afinn"
+colnames(count_UNGDsentiment_afinn)[colnames(count_UNGDsentiment_afinn)=="n"] <- "n_afinn"
+colnames(count_UNGDsentiment_afinn)[colnames(count_UNGDsentiment_afinn)=="value"] <- "value_afinn"
+
+merge_sentiment_counts2 <- merge(merge_sentiment_counts1, count_UNGDsentiment_afinn, by = c('MergeCountry','Year'), all=TRUE)
+head(merge_sentiment_counts2)
+
+##nrc
+head(count_UNGDsentiment_nrc)
+colnames(count_UNGDsentiment_nrc)[colnames(count_UNGDsentiment_nrc)=="method"] <- "method_nrc"
+colnames(count_UNGDsentiment_nrc)[colnames(count_UNGDsentiment_nrc)=="n"] <- "n_nrc"
+colnames(count_UNGDsentiment_nrc)[colnames(count_UNGDsentiment_nrc)=="sentiment"] <- "sentiment_nrc"
+
+merge_sentiment_all <- merge(merge_sentiment_counts2, count_UNGDsentiment_nrc, by = c('MergeCountry','Year'), all=TRUE)
+head(merge_sentiment_all)
 
 ```
 
@@ -533,8 +552,8 @@ head(merge_sentiment_counts1)
 
 ```{r}
 #create dfm with clean tokenized text
-clean_dfm_UNGD <- dfm(clean_toks_UNGD) 
-tbl_UNGD <- convert(clean_dfm_UNGD, to = "data.frame")
+#clean_dfm_UNGD <- dfm(clean_toks_UNGD) 
+#tbl_UNGD <- convert(clean_dfm_UNGD, to = "data.frame")
 
 #dict_bing <- get_sentiment_dictionary(dictionary = "bing")
 #dict_syuzhet <- get_sentiment_dictionary(dictionary = "syuzhet")
@@ -569,45 +588,7 @@ barplot(
 ```
 
 
-Data Frame of human rights variables in UNGDC
-
 ```{r}
-#creating a data frame 
-Human.Rights_HR <- convert(HR_dfm_total, to = "data.frame")
-
-#converting documentID into two columns - country and year
-HR_counts <- Human.Rights_HR %>%
-  separate(document, c("country", "year"), "_")
-
-#year as numeric
-HR_counts$year <- as.numeric(HR_counts$year)
-HR_counts <- plyr::rename(HR_counts, c("human_rights_total"="HR"))
-```
-
-
-```{r}
-#Merge total HR dictionary counts with the MergeNA_PTS_ungd_1976 data set
-
-colnames(HR_counts)[colnames(HR_counts)=="country"] <- "MergeCountry"
-colnames(HR_counts)[colnames(HR_counts)=="year"] <- "Year"
-
-colnames(merge_HHRRcounts)[colnames(merge_HHRRcounts)=="MergeCountry"] <- "MergeCountry"
-
-merge_HHRRcounts %>%
-      group_by(MergeCountry) %>%
-      summarise(n = n())
-
-HR_counts %>%
-      group_by(MergeCountry) %>%
-      summarise(n = n())
-
-merge_HRdict_counts <- merge(merge_HHRRcounts, HR_counts, by = c('MergeCountry','Year'), all=TRUE)
-
-head(merge_HRdict_counts)
-#merged dataset with both dictionaries: HHRRterm and HRdict
-```
-
-
 #Sentiment Analysis Regression
 
 ## Model 1. Relation between changes in PTS and sentiment of features within the bing (binary) sentiment dictionary in UNGD speeches
@@ -615,10 +596,11 @@ head(merge_HRdict_counts)
 Linear regression model between changes in PTS (State Department) and mentions of the "Human Rights" concept in UNGD speeches (1976 - 2018)
 
 ```{r}
+head(merge_sentiment_counts1)
 Modelbing_S <- lm (HR ~ PTS_S + PTS_S_ch + PTS_S*PTS_S_ch, data = merge_HRdict_counts)
 screenreg(Modelbing_S)
 
-Modelbing_A <- lm (HR ~ PTS_A + PTS_A_ch + PTS_A*PTS_A_ch, data = merge_HRdict_counts)
+Modelbing_A <- lm ( n_bing ~ PTS_A + PTS_A_ch + PTS_A*PTS_A_ch, data = merge_HRdict_counts)
 screenreg(Modelbing_A)
 
 Modelbing_H <- lm (HR ~ PTS_H + PTS_H_ch + PTS_H*PTS_H_ch, data = merge_HRdict_counts)
