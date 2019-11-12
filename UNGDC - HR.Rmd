@@ -9,6 +9,7 @@ output: html_document
 library(compareDF)
 library(dplyr)
 library(foreign)
+install.packages("ggplot2")
 library(ggplot2)
 library(haven)
 library(lmtest)
@@ -410,18 +411,37 @@ screenreg(ModelHRdict_H)
 sent_words <- clean_PTS_ungd1976 %>%
   group_by(MergeCountry) %>%
   ungroup() %>%
-  unnest_tokens(word, text)
-#head(sent_words)
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words)
+  #count(doc_id, word, sort = TRUE)
 
-sent_words_lim <- subset(sent_words, select = c(Year, MergeCountry, PTS_A, PTS_A_var, Session, word))
+str(sent_words)
+
+sent_words_lim <- subset(sent_words, select = c(Year, MergeCountry, doc_id, PTS_A, PTS_A_var, Session, word))
 sent_words_lim
+
+sent_words <- sent_words %>%
+  bind_tf_idf(word, doc_id, n) %>%
+  arrange(desc(tf_idf))
 
 #find total number of words per country per year in speech 
 wordstotal <- sent_words_lim %>%
-  count(MergeCountry, Year)
-wordstotal$total<-wordstotal$n
-wordstotal<-wordstotal[,c("MergeCountry", "Year", "total")]
+  count(doc_id, word, sort = TRUE)
+str(wordstotal)
+
+wordstotal <- wordstotal %>%
+  bind_tf_idf(word, doc_id , n) %>%
+  arrange(desc(tf_idf))
 wordstotal
+
+
+
+##merge tf idf back with the dataset
+sent_tfidf <- merge(sent_words, wordstotal, by = c('doc_id','word'), all=TRUE)
+head(sent_tfidf)
+
+sent_words_lim <- subset(sent_words, select = c(Year, MergeCountry, doc_id, PTS_S, PTS_S_var, Session, word))
+head(sent_words_lim)
 
 
 ```
@@ -436,14 +456,6 @@ sentiment_plotn <-
   count(Year, MergeCountry, sentiment)
 
 library(ggplot2)
-
-ggplot(sentiment_plotn, aes(x=Year, y=n))+
-  geom_smooth(color="blue")+
-  geom_point(color="red")+
-  theme_minimal()+
-  ylab("Frequency of Negative Words in UN speeches")+
-  xlab("Year")
-
 #positive emotions UN speeches - bing
 
 sentiment_plotp <-
@@ -452,16 +464,27 @@ sentiment_plotp <-
   filter(sentiment == "positive") %>%
   count(Year, MergeCountry, sentiment)
 
+par(mfrow=c(2,1), mar=c(4, 4.1, 4.1, 2.1))  
 ggplot(sentiment_plotp, aes(x=as.numeric(Year), y=n))+
   geom_smooth(color="red")+
-  geom_point(color="blue")+
   theme_minimal()+
   ylab("Frequency of Positive Words in UN speeches")+
   xlab("Year")
 
+ggplot(sentiment_plotn, aes(x=Year, y=n))+
+  geom_smooth(color="blue")+
+  geom_point(color="red")+
+  theme_minimal()+
+  ylab("Frequency of Negative Words in UN speeches")+
+  xlab("Year")
+
+ggplot(sentiment_plotp, aes(x=as.numeric(Year), y=n))+
+  geom_smooth(color="red")+
+  geom_smooth(data=sentiment_plotn, color="blue")
+
 ###no sentiment filter - bing
 count_UNGDsentiment_bing <-
-  sent_words_lim %>%
+  sent_tfidf %>%
   inner_join(get_sentiments("bing")) %>% 
   count(Year, MergeCountry, sentiment)
 
@@ -543,8 +566,8 @@ colnames(count_UNGDsentiment_nrc)[colnames(count_UNGDsentiment_nrc)=="method"] <
 colnames(count_UNGDsentiment_nrc)[colnames(count_UNGDsentiment_nrc)=="n"] <- "n_nrc"
 colnames(count_UNGDsentiment_nrc)[colnames(count_UNGDsentiment_nrc)=="sentiment"] <- "sentiment_nrc"
 
-merge_sentiment_all <- merge(merge_HRdict_counts, count_UNGDsentiment_nrc, by = c('MergeCountry','Year'), all=TRUE)
-head(merge_sentiment_all)
+merge_sentiment_counts3<- merge(merge_HRdict_counts, count_UNGDsentiment_nrc, by = c('MergeCountry','Year'), all=TRUE)
+head(merge_sentiment_counts3)
 
 ```
 
@@ -552,7 +575,7 @@ head(merge_sentiment_all)
 #graphs on dataset 
 
 ```{r}
-summary(merge_sentiment_all$PTS_S_var)
+summary(merge_sentiment3$PTS_S_var)
 
 ggplot(merge_sentiment_counts1, aes(x=as.numeric(PTS_S_var), y=n_bing))+
   geom_jitter(color="red")+
@@ -561,8 +584,8 @@ ggplot(merge_sentiment_counts1, aes(x=as.numeric(PTS_S_var), y=n_bing))+
   xlab("Change in PTS")
 #the count of sentiments (both negative and positive) or emotional speech becomes less frequent with bing
 
-ggplot(merge_sentiment_counts2, aes(x=as.numeric(PTS_S_var), y=value_afinn))+
-  geom_line(color="red")+
+ggplot(merge_sentiment_counts2, aes(x=as.numeric(PTS_S_var), y=sentiment_afinn))+
+  geom_jitter(color="red")+
   theme_minimal()+
   ylab("Value of Sentiment Words in UN speeches")+
   xlab("Change in PTS")
@@ -579,14 +602,14 @@ Linear regression model between changes in PTS (State Department) and mentions o
 ```{r}
 ###create dummies for PTS
 head(merge_sentiment_counts1)
-merge_sentiment_all$PTS_S_dummy <- factor(merge_sentiment_all$PTS_S)
-is.factor(merge_sentiment_all$PTS_S_dummy)
+merge_sentiment_counts1$PTS_A_dummy <- factor(merge_sentiment_counts1$PTS_A)
+is.factor(merge_sentiment_counts1$PTS_A_dummy)
 
-merge_sentiment_all$PTS_A_dummy <- factor(merge_sentiment_all$PTS_A)
-is.factor(merge_sentiment_all$PTS_A_dummy)
+merge_sentiment_counts2$PTS_A_dummy <- factor(merge_sentiment_counts2$PTS_A)
+is.factor(merge_sentiment_counts2$PTS_A_dummy)
 
-merge_sentiment_all$PTS_H_dummy <- factor(merge_sentiment_all$PTS_H)
-is.factor(merge_sentiment_all$PTS_H_dummy)
+merge_sentiment_counts3$PTS_A_dummy <- factor(merge_sentiment_counts3$PTS_A)
+is.factor(merge_sentiment_counts3$PTS_A_dummy)
 ```
 
 
@@ -597,14 +620,14 @@ is.factor(merge_sentiment_all$PTS_H_dummy)
 ```{r}
 
 ###packages
-#install.packages ("plm")
+install.packages ("plm")
 library(plm)
 
 ###positive bing 
-Modelbing_S_pos <- plm (n_bing ~ PTS_S_dummy + PTS_S_var + PTS_S_dummy*PTS_S_var, data = subset(merge_sentiment_counts1, sentiment_bing == "positive"), effect = "twoways", model = "within")
+Modelbing_S_pos <- plm (n_bing ~ PTS_S_dummy + PTS_S_var + PTS_S_dummy*PTS_S_var, data = subset(merge_sentiment_counts1, sentiment_bing == "positive"), , na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelbing_S_pos)
 
-Modelbing_A_pos <- plm (n_bing ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts1, sentiment_bing == "positive"), effect = "twoways", model = "within")
+Modelbing_A_pos <- plm (n_bing ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts1, sentiment_bing == "positive"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelbing_A_pos)
 
 Modelbing_H <- plm (n_bing ~ PTS_H_dummy + PTS_H_var + PTS_H_dummy*PTS_H_var, data = subset(merge_sentiment_counts1, sentiment_bing == "positive"), effect = "twoways", model = "within")
@@ -617,16 +640,15 @@ Modelbing_S_neg <- plm (n_bing ~ PTS_S_dummy + PTS_S_var + PTS_S_dummy*PTS_S_var
 screenreg(Modelbing_S_neg)
 #PTS leads to more negative sentiment in speeches
 
-Modelbing_A_neg <- plm (n_bing ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts1, sentiment_bing == "negative"), effect = "twoways", model = "within")
+Modelbing_A_neg <- plm (n_bing ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts1, sentiment_bing == "negative"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelbing_A_neg)
 #PTS leads to more negative sentiment in speeches
 
-
-###regressions without time-series analysis
+###regressions with sentiment in general
 Modelbing_S <- lm (n_bing ~ PTS_S_dummy + PTS_S_var + PTS_S_dummy*PTS_S_var, data = merge_sentiment_all)
 screenreg(Modelbing_S)
 
-Modelbing_A <- lm (n_bing ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = merge_sentiment_all)
+Modelbing_A <- lm (n_bing ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, na.action = na.exclude, data = merge_sentiment_counts1)
 screenreg(Modelbing_A)
 
 Modelbing_H <- lm (n_bing ~ PTS_H_dummy + PTS_H_var + PTS_H_dummy*PTS_H_var, data = merge_sentiment_all)
@@ -647,7 +669,7 @@ screenreg(Modelafinn_S)
 #dummys PTS 4 and 5 are significant and negative, so sentiment becomes more negative if a country has a higher score
 #interaction between PTS2 and change is significant and negative
 
-Modelafinn_A <- plm (sentiment_afinn ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = merge_sentiment_counts2, effect = "twoways", model = "within")
+Modelafinn_A <- plm (sentiment_afinn ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = merge_sentiment_counts2, na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelafinn_A)
 #only dummies significant and negative
 
@@ -658,27 +680,72 @@ screenreg(Modelafinn_A)
 ###regressions nrc
 #--> i need to group them by the sentiment of anger etc. in each of the windows...
 
-
+##ANGER
 head(merge_sentiment_all$sentiment_nrc, 20)
-Modelnrc_S <- plm (n_nrc ~ PTS_S_dummy + PTS_S_var + PTS_S_dummy*PTS_S_var, data = subset(merge_sentiment_all, sentiment_nrc == "anger"), effect = "twoways", model = "within")
+Modelnrc_S <- plm (n_nrc ~ PTS_S_dummy + PTS_S_var + PTS_S_dummy*PTS_S_var, data = subset(merge_sentiment_all, sentiment_nrc == "anger"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelnrc_S)
 #dummies positive significant: more anger talk, change alone is significant and negative, interaction with dummy 2 significant and positive 
 
-Modelnrc_A <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_all, sentiment_nrc == "anger"), effect = "twoways", model = "within")
-screenreg(Modelnrc_A)
+Modelnrc_anger <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "anger"), na.action = na.exclude, effect = "twoways", model = "within")
+screenreg(Modelnrc_anger)
 #dummies positive and significant
 
-Modelnrc_S_disgust <- plm (n_nrc ~ PTS_S_dummy + PTS_S_var + PTS_S_dummy*PTS_S_var, data = subset(merge_sentiment_all, sentiment_nrc == "disgust"), effect = "twoways", model = "within")
-screenreg(Modelnrc_S_disgust)
+Modelnrc_A_disgust <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "disgust"), na.action = na.exclude, effect = "twoways", model = "within")
+screenreg(Modelnrc_A_disgust)
 #significant
 
-Modelnrc_S_sadness <- plm (n_nrc ~ PTS_S_dummy + PTS_S_var + PTS_S_dummy*PTS_S_var, data = subset(merge_sentiment_all, sentiment_nrc == "sadness"), effect = "twoways", model = "within")
-screenreg(Modelnrc_S_sadness)
+Modelnrc_A_sadness <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "sadness"), na.action = na.exclude, effect = "twoways", model = "within")
+screenreg(Modelnrc_A_sadness)
+
+Modelnrc_A_fear <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "fear"), na.action = na.exclude, effect = "twoways", model = "within")
+screenreg(Modelnrc_A_fear)
+#interaction term positive and negative
+
+Modelnrc_A_negative <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "negative"), na.action = na.exclude, effect = "twoways", model = "within")
+screenreg(Modelnrc_A_negative)
+
+#positive categories
+Modelnrc_A_positive <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "positive"), na.action = na.exclude, effect = "twoways", model = "within")
+screenreg(Modelnrc_A_positive)
+
+Modelnrc_A_anticip <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "anticipation"), na.action = na.exclude, effect = "twoways", model = "within")
+screenreg(Modelnrc_A_anticip)
+
+Modelnrc_A_trust <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "trust"), na.action = na.exclude, effect = "twoways", model = "within")
+screenreg(Modelnrc_A_trust)
+
+Modelnrc_A_surprise <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "surprise"), na.action = na.exclude, effect = "twoways", model = "within")
+screenreg(Modelnrc_A_surprise)
+
+Modelnrc_A_joy <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "joy"), na.action = na.exclude, effect = "twoways", model = "within")
+screenreg(Modelnrc_A_joy)
+
+summary(merge_sentiment_counts3$sentiment_nrc)
 #significant
 ```
 
 ## Model 2(all sentiment dictionaries). Relation between changes in PTS and sentiment of features within the bing (binary) sentiment dictionary in UNGD speeches
 
+
+####Graph plots - keyness
+
+```{r}
+
+##EXPORT REGRESSION RESULTS
+
+stargazer(Modelbing_A_pos, Modelbing_A_neg, Modelafinn_A, Modelnrc_anger, Modelnrc_A_disgust, Modelnrc_A_fear, Modelnrc_A_surprise,
+          align=TRUE,
+          type = 'text',
+          covariate.labels = c("PTS=2","PTS=3","PTS=4","PTS=5","change of PTS","PTS=2*change","PTS=3*change","PTS=4*change"),
+          column.sep.width = "10pt",
+          title= "Table 2. Panel regression - Sentiment Analysis",
+          dep.var.labels = c("",""),
+          column.labels = c("bing positive", "bing negative","afinn", "anger", "disgust", "fear", "surprise"),
+          model.names = FALSE, 
+          model.numbers = FALSE,
+          omit.stat=c("LL","ser","f","adj.rsq"),
+          star.char = c("*","**","***"),
+          star.cutoffs = c(0.05,0.01,0.001))
 ```
 
 
