@@ -33,8 +33,12 @@ library(tidytext)
 library(tidyverse)
 library(glue)
 library(remotes)
-install_github("EmilHvitfeldt/textdata")
-install_github("juliasilge/tidytext")
+#install_github("EmilHvitfeldt/textdata")
+#install_github("juliasilge/tidytext")
+library(textdata)
+library(tidytext)
+library(topicmodels)
+
 ```
 
 ### PTS and UNGDC data
@@ -80,6 +84,8 @@ ungd_files$doc_id <- str_replace(ungd_files$doc_id , ".txt", "") %>%
 unlink(temp)
 rm(temp)
 rm(urlungdc)
+ungd_files<-ungd_files[!ungd_files$Country == "VAT", ]
+ungd_files<-ungd_files[!ungd_files$Country == "EU", ]
 ```
 
 
@@ -87,6 +93,37 @@ rm(urlungdc)
 ```{r}
 load(url("http://www.politicalterrorscale.org/Data/Files/PTS-2019.RData"))
 PTS_2019<-arrange(PTS_2019,Country,Year)
+PTS_2019$Country<-as.character(PTS_2019$Country)
+PTS_2019$WordBank_Code_A<-as.character(PTS_2019$WordBank_Code_A)
+
+PTS_2019<-PTS_2019 %>% 
+  mutate(.,WordBank_Code_A=ifelse(Country=="Czechoslovakia", "CSK", WordBank_Code_A))
+
+PTS_2019<-PTS_2019 %>% 
+  mutate(.,WordBank_Code_A=ifelse(Country=="Romania", "ROU", WordBank_Code_A))
+
+PTS_2019<-PTS_2019 %>% 
+  mutate(.,WordBank_Code_A=ifelse(Country=="Congo, the Democratic Republic of the", "COD", WordBank_Code_A))
+
+PTS_2019<-PTS_2019 %>% 
+  mutate(.,WordBank_Code_A=ifelse(Country=="Andorra", "AND", WordBank_Code_A))
+
+PTS_2019<-PTS_2019 %>% 
+  mutate(.,WordBank_Code_A=ifelse(Country=="German Democratic Republic", "DDR", WordBank_Code_A))
+
+PTS_2019<-PTS_2019 %>% 
+  mutate(.,WordBank_Code_A=ifelse(Country=="European Union", "EU", WordBank_Code_A))
+
+PTS_2019<-PTS_2019 %>% 
+  mutate(.,WordBank_Code_A=ifelse(Country=="Yemen People's Republic", "YDYE", WordBank_Code_A))
+
+PTS_2019<-PTS_2019 %>% 
+  mutate(.,WordBank_Code_A=ifelse(Country=="Palestine, State of", "PSE", WordBank_Code_A))
+
+PTS_2019<-PTS_2019 %>% 
+  mutate(.,WordBank_Code_A=ifelse(Country=="Timor-Leste", "TLS", WordBank_Code_A))
+
+PTS_2019<-PTS_2019[!PTS_2019$WordBank_Code_A == "EU", ]
 
 PTS_2019<-PTS_2019 %>% 
   group_by(Country) %>% 
@@ -146,6 +183,23 @@ tail(mergeNA_PTS_ungd_1976)
 head(NA_PTS_ungd1976,20)
 tail(NA_PTS_ungd1976)
 #there are 11 countries which we have to delete due to non-existing data in the text corpus
+```
+```{r}
+#World Map
+
+PTS_20199<-PTS_2019
+PTS_20199$PTS_A_ch<-abs(PTS_20199$PTS_A_ch)
+PTS_20199<-subset(PTS_20199,!is.na(PTS_20199$PTS_A_ch))
+summary(PTS_20199$PTS_A_ch)
+
+PTS_20199<-aggregate(PTS_20199$PTS_A_ch, by=list(Category=PTS_20199$MergeCountry), FUN=sum)
+
+
+worldok<-joinCountryData2Map(PTS_20199,joinCode = "ISO3", nameJoinColumn = "Category", nameCountryColumn = "Country", suggestForFailedCodes = FALSE, mapResolution = "coarse", projection = NA, verbose = TRUE)
+
+new_world <- subset(worldok, continent != "Antarctica")
+
+mapCountryData(new_world, nameColumnToPlot="x",mapTitle="Changes in PTS by Country 1976-2018",numCats=28, catMethod="pretty", colourPalette="heat",addLegend="TRUE", missingCountryCol="#3B3939",lwd = 0.1)  
 ```
 
 ```{r}
@@ -774,6 +828,68 @@ ggplot(merge_sentiment_counts2, aes(x=as.numeric(PTS_S_var), y=sentiment_afinn))
   xlab("Change in PTS")
 #the sentiment value becomes more negative when PTS changes positively
 
+ggplot(subset(merge_sentiment_counts1,!is.na(PTS_S_var)), aes(x=Year, y=n_bing, colour=factor(PTS_S_var)))+
+    geom_smooth(method="loess",aes(color=factor(PTS_S_var))) + 
+  theme_minimal()+
+  ylab("Value of Sentiment Words in UN speeches")+
+  xlab("Change in PTS")
+
+summary(merge_sentiment_counts2$sentiment_afinn)
+ggplot(subset(merge_sentiment_counts2,!is.na(PTS_S_var)), aes(x=Year, y=sentiment_afinn, colour=factor(PTS_S_var)))+
+    geom_smooth(method="loess",aes(color=factor(PTS_S_var))) + 
+  theme_minimal()+
+  ylab("Value of Sentiment Words in UN speeches")+
+  xlab("Change in PTS")
+
+
+ggplot(subset(merge_sentiment_counts2,!is.na(PTS_A)), aes(x=Year, y=sentiment_afinn, colour=factor(PTS_A)))+
+    geom_smooth(method="loess",aes(color=factor(PTS_A)))+  
+ scale_x_continuous(limits=c(1976,2020),breaks=seq(1976,2018,12),expand = c(0, 0))+
+  scale_color_discrete(name = "PTS Score")+
+          labs(title="Sentiment Analysis", 
+             subtitle="AFINN lexicon", 
+             caption="", 
+             y="Value of Sentiment Words in UN Speeches",
+             x="Year")+
+        theme(axis.line = element_blank(),
+              panel.grid.major = element_line(colour = 'gray',size=0.2),
+              panel.grid.minor = element_blank(),
+              panel.border = element_blank(),
+              panel.background = element_blank(),
+              plot.title = element_text(size = 16,hjust = 0.5),
+              plot.subtitle = element_text(size = 12,hjust = 0.5),
+              axis.title.x = element_text(size = 12),
+              axis.line.x = element_line(color = "gray40", size = 0.5),
+              axis.line.y = element_line(color = "gray40", size = 0.5),
+              axis.title.y = element_text(size = 12),
+              plot.caption = element_text(size = 8,hjust = 0,margin=margin(t=10)),
+              legend.position = "bottom")
+
+ggplot(subset(merge_sentiment_counts2,!is.na(PTS_A_var)), aes(factor(PTS_A), sentiment_afinn))+
+  geom_boxplot(varwidth=T, aes(fill=factor(PTS_A_var))) +
+  scale_fill_discrete(name = "Change in PTS Score", labels=c("No","Yes"))+
+          labs(title="Sentiment Analysis", 
+             subtitle="AFINN lexicon", 
+             caption="", 
+             y="Value of Sentiment Words in UN Speeches",
+             x="PTS Score - Amnesty International")+
+        theme(axis.line = element_blank(),
+              panel.grid.major = element_line(colour = 'gray',size=0.2),
+              panel.grid.minor = element_blank(),
+              panel.border = element_blank(),
+              panel.background = element_blank(),
+              plot.title = element_text(size = 16,hjust = 0.5),
+              plot.subtitle = element_text(size = 12,hjust = 0.5),
+              axis.title.x = element_text(size = 12),
+              axis.line.x = element_line(color = "gray40", size = 0.5),
+              axis.line.y = element_line(color = "gray40", size = 0.5),
+              axis.title.y = element_text(size = 12),
+              plot.caption = element_text(size = 8,hjust = 0,margin=margin(t=10)),
+              legend.position = "bottom")
+
+
+ggplot(subset(merge_sentiment_counts2,!is.na(PTS_S)), aes(sentiment_afinn))+
+    geom_density(aes(fill=factor(PTS_S)), alpha=0.2)
 ```
 
 #Sentiment Analysis Regression
@@ -1218,4 +1334,125 @@ stargazer(ModelHHRR_S, ModelHHRR_A, ModelHHRR_H,
           star.cutoffs = c(0.05,0.01,0.001),
           covariate.labels = c("D (Exposure to the Bárcenas scandal)", "Constant"))
 ```
+
+###Topic Modeling
+```{r}
+#CREATE DFM
+UNGDdfm <- dfm(clean_ungd_corpus, remove = stopwords("english"), verbose = TRUE, 
+               remove_punct = TRUE, remove_numbers = TRUE)
+
+UNGDtrim <- dfm_trim(UNGDdfm, min_docfreq = 2)
+
+#LDA with K TOPICS
+K <- 5
+lda <- LDA(UNGDtrim, k = K, method = "Gibbs", 
+           control = list(verbose=25L, seed = 123, burnin = 100, iter = 500))
+
+
+
+#PREDICT TOPICS
+terms <- get_terms(lda, 15)
+terms[,1]
+topics <- get_topics(lda, 1)
+head(topics)
+topics
+str(clean_PTS_ungd1976)
+
+str(terms)
+# Topic 2
+topic2 <- paste(terms[,2], collapse=", ")
+sample(clean_PTS_ungd1976$text[topics==2], 1)
+topic2
+
+
+?textplot_wordcloud
+
+# Topic 3
+paste(terms[,3], collapse=", ")
+sample(clean_PTS_UNGD1976[topics==3], 1)
+
+
+# Topic 2
+paste(terms[,2], collapse=", ")
+sample(nyt$lead_paragraph[topics==2], 1)
+# add predicted topic to dataset
+nyt$pred_topic <- topics
+nyt$year <- substr(nyt$datetime, 1, 4) # extract year
+ # frequency table with articles about stock market, per year
+tab <- table(nyt$year[nyt$pred_topic==2])
+plot(tab)
+
+
+round(lda@gamma[1,], 2)
+
+
+#Topic 1
+paste(terms[,1], collapse=", ")
+# add probability to df
+clean_PTS_ungd1976$prob_topic1 <- lda@gamma[,1]
+# now aggregate at the year level
+agg1 <- aggregate(clean_PTS_ungd1976$prob_topic1, by=list(Year=clean_PTS_ungd1976$Year), FUN=mean)
+
+# Topic 2
+paste(terms[,2], collapse=", ")
+# add probability to df
+clean_PTS_ungd1976$prob_topic2 <- lda@gamma[,2]
+# now aggregate at the year level
+agg2 <- aggregate(clean_PTS_ungd1976$prob_topic2, by=list(Year=clean_PTS_ungd1976$Year), FUN=mean)
+
+# Topic 3
+paste(terms[,3], collapse=", ")
+# add probability to df
+clean_PTS_ungd1976$prob_topic3 <- lda@gamma[,3]
+# now aggregate at the year level
+agg3 <- aggregate(clean_PTS_ungd1976$prob_topic3, by=list(Year=clean_PTS_ungd1976$Year), FUN=mean)
+
+# Topic 4
+paste(terms[,4], collapse=", ")
+# add probability to df
+clean_PTS_ungd1976$prob_topic4 <- lda@gamma[,4]
+# now aggregate at the year level
+agg4 <- aggregate(clean_PTS_ungd1976$prob_topic4, by=list(Year=clean_PTS_ungd1976$Year), FUN=mean)
+
+# Topic 5
+paste(terms[,5], collapse=", ")
+# add probability to df
+clean_PTS_ungd1976$prob_topic5 <- lda@gamma[,5]
+# now aggregate at the year level
+agg5<- aggregate(clean_PTS_ungd1976$prob_topic5, by=list(Year=clean_PTS_ungd1976$Year), FUN=mean)
+agg<-agg1
+agg$x2<-agg2$x
+agg$x3<-agg3$x
+agg$x4<-agg4$x
+agg$x5<-agg5$x
+names(agg)
+agg<-pivot_longer(agg,-Year,names_to="x",values_to ="values")
+agg$x<-factor(agg$x)
+levels(agg$x)
+levels(agg$x) <- c("Security in the Middle-East", "Security in Africa", "Global Climate","Human Rights","Not Specific")
+
+ggplot(agg, aes(x=Year, y=values, group=x)) + 
+        geom_line(aes(colour=x), size =1) +
+        scale_x_continuous(limits=c(1976,2020),breaks=seq(1976,2018,12),expand = c(0, 0))+
+        scale_colour_manual(values=c("Security in the Middle-East"="#000066","Security in Africa"="#663399","Global Climate"="#339999","Human Rights"="#CC0033","Not Specific"="#FF6600"))+
+        labs(title="Topic Analysis - UNGD", 
+             subtitle="Estimated proportion of speeches about:", 
+             caption="", 
+             y="Average Probability of Speeches About the Topic",
+             x="Year")+
+        theme(axis.line = element_blank(),
+              panel.grid.major = element_line(colour = 'gray',size=0.2),
+              panel.grid.minor = element_blank(),
+              panel.border = element_blank(),
+              panel.background = element_blank(),
+              plot.title = element_text(size = 16,hjust = 0.5),
+              plot.subtitle = element_text(size = 12,hjust = 0.5),
+              axis.title.x = element_text(size = 12),
+              axis.line.x = element_line(color = "gray40", size = 0.5),
+              axis.line.y = element_line(color = "gray40", size = 0.5),
+              axis.title.y = element_text(size = 12),
+              plot.caption = element_text(size = 8,hjust = 0,margin=margin(t=10)),
+              legend.position = "none")+
+        facet_wrap(~x, ncol=3)
+  ```
 
