@@ -9,7 +9,7 @@ output: html_document
 library(compareDF)
 library(dplyr)
 library(foreign)
-install.packages("ggplot2")
+#install.packages("ggplot2")
 library(ggplot2)
 library(haven)
 library(lmtest)
@@ -652,14 +652,8 @@ sent_words <- clean_PTS_ungd1976 %>%
   anti_join(stop_words)
   #count(doc_id, word, sort = TRUE)
 
-str(sent_words)
-
 sent_words_lim <- subset(sent_words, select = c(Year, MergeCountry, doc_id, PTS_A, PTS_A_var, Session, word))
 sent_words_lim
-
-sent_words <- sent_words %>%
-  bind_tf_idf(word, doc_id, n) %>%
-  arrange(desc(tf_idf))
 
 #find total number of words per country per year in speech 
 wordstotal <- sent_words_lim %>%
@@ -670,16 +664,6 @@ wordstotal <- wordstotal %>%
   bind_tf_idf(word, doc_id , n) %>%
   arrange(desc(tf_idf))
 wordstotal
-
-
-
-##merge tf idf back with the dataset
-sent_tfidf <- merge(sent_words, wordstotal, by = c('doc_id','word'), all=TRUE)
-head(sent_tfidf)
-
-sent_words_lim <- subset(sent_words, select = c(Year, MergeCountry, doc_id, PTS_S, PTS_S_var, Session, word))
-head(sent_words_lim)
-
 
 ```
 ### Add sentiment dictionaries and dictionary counts
@@ -812,8 +796,6 @@ head(merge_sentiment_counts3)
 #graphs on dataset 
 
 ```{r}
-summary(merge_sentiment3$PTS_S_var)
-
 ggplot(merge_sentiment_counts1, aes(x=as.numeric(PTS_S_var), y=n_bing))+
   geom_jitter(color="red")+
   theme_minimal()+
@@ -919,39 +901,25 @@ is.factor(merge_sentiment_counts3$PTS_A_dummy)
 ```{r}
 
 ###packages
-install.packages ("plm")
+#install.packages ("plm")
 library(plm)
 
 ###positive bing 
-Modelbing_S_pos <- plm (n_bing ~ PTS_S_dummy + PTS_S_var + PTS_S_dummy*PTS_S_var, data = subset(merge_sentiment_counts1, sentiment_bing == "positive"), , na.action = na.exclude, effect = "twoways", model = "within")
-screenreg(Modelbing_S_pos)
-
 Modelbing_A_pos <- plm (n_bing ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts1, sentiment_bing == "positive"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelbing_A_pos)
 
-Modelbing_H <- plm (n_bing ~ PTS_H_dummy + PTS_H_var + PTS_H_dummy*PTS_H_var, data = subset(merge_sentiment_counts1, sentiment_bing == "positive"), effect = "twoways", model = "within")
-screenreg(Modelbing_H)
 #for A and S, only PTS dummies are significant, so a higher PTS leads to more positive sentiments in UNGDC speeches
 
 
 ###negative bing
-Modelbing_S_neg <- plm (n_bing ~ PTS_S_dummy + PTS_S_var + PTS_S_dummy*PTS_S_var, data = subset(merge_sentiment_counts1, sentiment_bing == "negative"), effect = "twoways", model = "within")
-screenreg(Modelbing_S_neg)
-#PTS leads to more negative sentiment in speeches
-
 Modelbing_A_neg <- plm (n_bing ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts1, sentiment_bing == "negative"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelbing_A_neg)
 #PTS leads to more negative sentiment in speeches
 
-###regressions with sentiment in general
-Modelbing_S <- lm (n_bing ~ PTS_S_dummy + PTS_S_var + PTS_S_dummy*PTS_S_var, data = merge_sentiment_all)
-screenreg(Modelbing_S)
-
+#in general
 Modelbing_A <- lm (n_bing ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, na.action = na.exclude, data = merge_sentiment_counts1)
 screenreg(Modelbing_A)
 
-Modelbing_H <- lm (n_bing ~ PTS_H_dummy + PTS_H_var + PTS_H_dummy*PTS_H_var, data = merge_sentiment_all)
-screenreg(Modelbing_H)
 #all coefficients significant, also in the interaction term
 
 ```
@@ -960,13 +928,6 @@ screenreg(Modelbing_H)
 
 ```{r}
 ###regressions afinn
-
-head(merge_sentiment_counts2,20)
-summary(merge_sentiment_counts2$sentiment_afinn)
-Modelafinn_S <- plm (sentiment_afinn ~ PTS_S_dummy + PTS_S_var + PTS_S_dummy*PTS_S_var, data = merge_sentiment_counts2, effect = "twoways", model = "within")
-screenreg(Modelafinn_S)
-#dummys PTS 4 and 5 are significant and negative, so sentiment becomes more negative if a country has a higher score
-#interaction between PTS2 and change is significant and negative
 
 Modelafinn_A <- plm (sentiment_afinn ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = merge_sentiment_counts2, na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelafinn_A)
@@ -980,11 +941,6 @@ screenreg(Modelafinn_A)
 #--> i need to group them by the sentiment of anger etc. in each of the windows...
 
 ##ANGER
-head(merge_sentiment_all$sentiment_nrc, 20)
-Modelnrc_S <- plm (n_nrc ~ PTS_S_dummy + PTS_S_var + PTS_S_dummy*PTS_S_var, data = subset(merge_sentiment_all, sentiment_nrc == "anger"), na.action = na.exclude, effect = "twoways", model = "within")
-screenreg(Modelnrc_S)
-#dummies positive significant: more anger talk, change alone is significant and negative, interaction with dummy 2 significant and positive 
-
 Modelnrc_anger <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "anger"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelnrc_anger)
 #dummies positive and significant
@@ -1267,7 +1223,7 @@ summary(ModelHHRR_S)
 
 ```{r}
 #regression with fixed effects
-install.packages("plm")
+#install.packages("plm")
 library(plm)
 str(merge_HHRRcounts)
 
@@ -1276,7 +1232,7 @@ screenreg(ModelHHRR_S_fe)
 summary(ModelHHRR_S_fe)
 
 #resulting duplicate couples
-table(index(merge_HHRRcounts), useNA = "ifany")
+#table(index(merge_HHRRcounts), useNA = "ifany")
 
 #PTS_S significant and negative
 ModelHHRR_A_fe <- plm (HHRR ~ PTS_A_dummy + factor(PTS_A_var) + PTS_A_dummy*factor(PTS_A_var), data = merge_HHRRcounts, effect = "twoways", model = "within")
@@ -1294,7 +1250,7 @@ screenreg(ModelHHRR_H_fe)
 ModelHHRR_A <- lm (HHRR ~ factor(PTS_A) + factor(PTS_A_var) + factor(PTS_A)*factor(PTS_A_var), data = merge_HHRRcounts)
 
 ModelHRdict_A <- lm (HR ~ factor(PTS_A) + factor(PTS_A_var) + factor(PTS_A)*factor(PTS_A_var), data = merge_HRdict_counts)
-screenreg(ModelHRdict_A_feHHRR)
+screenreg(ModelHRdict_A)
 names(ModelHRdict_A_fe)
 
 
@@ -1316,23 +1272,6 @@ stargazer(ModelHR_A, ModelHRdict_A_feHR, ModelHHRR_A, ModelHRdict_A_feHHRR,
           omit.stat=c("LL","ser","f","adj.rsq"),
           title= "OLS and two-way fixed effects models-Effect PTS AI on HR mentions",
           covariate.labels = c("PTS=2", "PTS=3","PTS=4","PTS=5","VPTS","PTS=2*VPTS", "PTS=3*VPTS","PTS=4*VPTS","", "Constant"))
-          
-          
-library(stargazer)
-stargazer(ModelHHRR_S, ModelHHRR_A, ModelHHRR_H,
-          align=TRUE,
-          type = 'text',
-          covariate.labels = c("a","s","d","f","g","h","j","k"),
-          column.sep.width = "10pt",
-          title= "Table 1. OLS regression - Effect of Barcenas scandal on trust in police",
-          dep.var.labels = "Trust in Police")
-          model.names = FALSE, 
-          column.labels = c("Amnesty International", "State Department","Human Rights Watch"),
-          model.numbers = FALSE,
-          omit.stat=c("LL","ser","f","adj.rsq"	),
-          star.char = c("*","**","***"),
-          star.cutoffs = c(0.05,0.01,0.001),
-          covariate.labels = c("D (Exposure to the Bárcenas scandal)", "Constant"))
 ```
 
 ###Topic Modeling
@@ -1356,35 +1295,6 @@ terms[,1]
 topics <- get_topics(lda, 1)
 head(topics)
 topics
-str(clean_PTS_ungd1976)
-
-str(terms)
-# Topic 2
-topic2 <- paste(terms[,2], collapse=", ")
-sample(clean_PTS_ungd1976$text[topics==2], 1)
-topic2
-
-
-?textplot_wordcloud
-
-# Topic 3
-paste(terms[,3], collapse=", ")
-sample(clean_PTS_UNGD1976[topics==3], 1)
-
-
-# Topic 2
-paste(terms[,2], collapse=", ")
-sample(nyt$lead_paragraph[topics==2], 1)
-# add predicted topic to dataset
-nyt$pred_topic <- topics
-nyt$year <- substr(nyt$datetime, 1, 4) # extract year
- # frequency table with articles about stock market, per year
-tab <- table(nyt$year[nyt$pred_topic==2])
-plot(tab)
-
-
-round(lda@gamma[1,], 2)
-
 
 #Topic 1
 paste(terms[,1], collapse=", ")
@@ -1454,5 +1364,6 @@ ggplot(agg, aes(x=Year, y=values, group=x)) +
               plot.caption = element_text(size = 8,hjust = 0,margin=margin(t=10)),
               legend.position = "none")+
         facet_wrap(~x, ncol=3)
-  ```
+
+```
 
