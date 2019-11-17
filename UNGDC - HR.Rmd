@@ -9,7 +9,11 @@ output: html_document
 library(compareDF)
 library(dplyr)
 library(foreign)
+<<<<<<< HEAD
 #install.packages("ggplot2")
+=======
+library(glue)
+>>>>>>> eb719b2e8772912c277804c58a80ae6b526be9af
 library(ggplot2)
 library(haven)
 library(lmtest)
@@ -18,40 +22,23 @@ library(plm)
 library(quanteda)
 library(readtext)
 library(readxl)
+library(remotes)
 library(RColorBrewer)
 library(rworldmap)
 library(stargazer)
 library(stringr)
 library(syuzhet)
-library(texreg)
-library(tidyr)
-library(zip)
 library(tibble)
-#install.packages("tidytext")
-#install.packages("tidyverse")
+library(tidyr)
 library(tidytext)
 library(tidyverse)
-library(glue)
-library(remotes)
-#install_github("EmilHvitfeldt/textdata")
-#install_github("juliasilge/tidytext")
+library(texreg)
 library(textdata)
-library(tidytext)
 library(topicmodels)
-
+library(zip)
 ```
 
-### PTS and UNGDC data
 
-```{r}
-#filelist <- list.files(path = root_folder, pattern = '*.txt', recursive = TRUE)
-#filenames <- basename(filelist)
-#ungdc_files <- data.frame(t(sapply(strsplit(filenames, '_'), 
-#                 function(x) c(x[1], x[2], substr(x[3], 1, 4)))))
-#colnames(ungdc_files) <- c('country', 'number', 'year')
-#ungdc_files$text <- sapply(paste0(root_folder, filelist), function(x) readChar(x, file.info(x)$size))
-#load(url("http://www.politicalterrorscale.org/Data/Files/PTS-2019.RData"))
-```
 
 # tadaproject
 Human Rights in the UNGA
@@ -186,7 +173,7 @@ tail(NA_PTS_ungd1976)
 ```
 ```{r}
 #World Map
-
+summary(PTS_2019$PTS_A_ch)
 PTS_20199<-PTS_2019
 PTS_20199$PTS_A_ch<-abs(PTS_20199$PTS_A_ch)
 PTS_20199<-subset(PTS_20199,!is.na(PTS_20199$PTS_A_ch))
@@ -240,7 +227,7 @@ stop_UNGD <- tokens_select(lower_UNGD, stopwords("english"), selection = "remove
 ngram_UNGD <- tokens(stop_UNGD, ngrams = c(1:2), include_docvars = TRUE)
 ```
 
-##################################################################
+
 #Dictionary Analysis HR binary
 ## 1. Identifying the frequency of usage of "Human Rights" in UN Speeches
 
@@ -322,13 +309,13 @@ ggplot(merge_HHRRcounts1,aes(x=Year,y=HHRR, color=Region))+
 Linear regression model between changes in PTS (State Department) and mentions of the "Human Rights" concept in UNGD speeches (1976 - 2018)
 
 ```{r}
-ModelHHRR_S <- lm (HHRR ~ factor(PTS_S^2) + PTS_S_var + factor(PTS_S)*PTS_S_var, data = merge_HHRRcounts)
+ModelHHRR_S <- lm (HHRR ~ factor(PTS_S) + PTS_S_var + factor(PTS_S)*PTS_S_var, data = merge_HHRRcounts)
 #PTS_S significant and negative, but the change in the PTS is not significant nor the interaction
 
 ModelHHRR_A <- lm (HHRR ~ factor(PTS_A) + PTS_A_var + factor(PTS_A)*PTS_A_var, data = merge_HHRRcounts)
 #PTS_A significant and negative, but the change in the PTS is not significant nor the interaction
 
-ModelHHRR_H <- lm (HHRR ~ PTS_H^2 + PTS_H_var + PTS_H*PTS_H_var, data = merge_HHRRcounts)
+ModelHHRR_H <- lm (HHRR ~ PTS_H + PTS_H_var + PTS_H*PTS_H_var, data = merge_HHRRcounts)
 #PTS_H insignificant
 
 screenreg(ModelHHRR_A)
@@ -343,9 +330,8 @@ screenreg(ModelHHRR_A)
 ```{r}
 ModelHHRR_S_fe <- plm (HHRR ~ PTS_S + PTS_S_ch + PTS_S*PTS_S_ch, data = merge_HHRRcounts, index = c("MergeCountry", "Year"), effect = "twoways", model = "within")
 
-ModelHHRR_A_fe <- plm (HHRR ~ PTS_A + PTS_A_ch + PTS_A*PTS_A_ch, data = merge_HHRRcounts, index = c("MergeCountry", "Year"), effect = "twoways", model = "within")
+ModelHHRR_A_fe <- plm (HHRR ~ factor(PTS_A) + PTS_A_var + factor(PTS_A)*PTS_A_var, data = merge_HHRRcounts, index = c("MergeCountry", "Year"), effect = "twoways", model = "within")
 
-screenreg(list(ModelHHRR_S_fe, ModelHHRR_S))
 screenreg(list(ModelHHRR_A_fe, ModelHHRR_A))
 ```
 
@@ -381,8 +367,8 @@ ggplot(plot_HHRR, aes(x=HHRR, y=PTS_A_ch, color=PTS_A)) +
 Scatterplot-box -- There is no significant change in the mentions of "Human Rights" for countries that change their levels of PTS - There are 2 outliers in change 0, PTS 1. That have significantly high mentions.
 
 ```{r}
-aaa<-ggplot(subset(plot_HHRR,!is.na(PTS_A_ch)), aes(factor(PTS_A_ch), HHRR))+
-  geom_boxplot(varwidth=T, aes(fill=factor(PTS_A)))
+aaa<-ggplot(subset(plot_HHRR,!is.na(PTS_A_var)), aes(factor(PTS_A), HHRR))+
+  geom_boxplot(varwidth=T, aes(fill=factor(PTS_A_var)))
   
 ```
 
@@ -501,7 +487,7 @@ Linear regression model between changes in PTS (Amnesty International) and menti
 ```{r}
 ModelHRdict_S <- lm (HR ~ PTS_S + PTS_S_ch + PTS_S*PTS_S_ch, data = merge_HRdict_counts)
 
-ModelHRdict_A <- lm (HR ~ PTS_A^2 + PTS_A_var + PTS_A*PTS_A_var, data = merge_HRdict_counts)
+ModelHRdict_A <- lm (HR ~ factor(PTS_A) + PTS_A_var + factor(PTS_A)*PTS_A_var, data = merge_HRdict_counts)
 
 ModelHRdict_H <- lm (HR ~ PTS_H + PTS_H_ch + PTS_H*PTS_H_ch, data = merge_HRdict_counts)
 ```
@@ -515,7 +501,7 @@ screenreg(list(ModelHRdict_S, ModelHRdict_A, ModelHRdict_H))
 ### Fixed Effects
 
 ```{r}
-ModelHR_A_fe <- plm (HR ~ PTS_A + PTS_A_ch + PTS_A*PTS_A_ch, data = merge_HRdict_counts, index = c("MergeCountry", "Year"), effect = "twoways", model = "within")
+ModelHR_A_fe <- plm (HR ~ factor(PTS_A) + PTS_A_var + factor(PTS_A)*PTS_A_var, data = merge_HRdict_counts, index = c("MergeCountry", "Year"), effect = "twoways", model = "within")
 ```
 
 
@@ -549,15 +535,15 @@ ggplot(plot_HR.dict, aes(x=HR, y=PTS_A_ch, color=PTS_A)) +
 There is no significant change in the mentions of Human Rights-related concepts for countries that change their levels of PTS - 
 
 ```{r}
-aaa.1<-ggplot(subset(plot_HR.dict,!is.na(PTS_A)), aes(factor(PTS_A), HR))+
+aaa.1<-ggplot(subset(plot_HR.dict,!is.na(PTS_A_var)), aes(PTS_A, HR))+
   geom_boxplot(varwidth=T, aes(fill=factor(PTS_A_var)))
   
 ```
 
 
 ```{r}
-bbb<- ggplot(subset(plot_HR.dict,!is.na(PTS_A_var)), aes(PTS_A_var))+
-    geom_density(aes(fill=factor(PTS_A)), alpha=0.2)
+bbb<- ggplot(subset(plot_HR.dict,!is.na(PTS_A_var)), aes(PTS_A))+
+    geom_density(aes(fill=factor(PTS_A_var)), alpha=0.2)
 ```
 
 
@@ -625,15 +611,37 @@ ModelHRdict_A$coefficients[2]
 ModelHRdict_A$coefficients[3]
 ModelHRdict_A$coefficients[4]
 
-merge_HRdict_counts$regression<-ModelHRdict_A$coefficients["(Intercept)"]+ ModelHRdict_A$coefficients[2]*merge_HRdict_counts$PTS_A^2+ModelHRdict_A$coefficients[3]*merge_HRdict_counts$PTS_A_var+ModelHRdict_A$coefficients[4]*merge_HRdict_counts$PTS_A*merge_HRdict_counts$PTS_A_var
+merge_HRdict_counts$regression<-ModelHRdict_A$coefficients["(Intercept)"]+ ModelHRdict_A$coefficients[2]*merge_HRdict_counts$PTS_A+ModelHRdict_A$coefficients[3]*merge_HRdict_counts$PTS_A_var+ModelHRdict_A$coefficients[4]*merge_HRdict_counts$PTS_A*merge_HRdict_counts$PTS_A_var
 ```
 
 ```{r}
-prediction <- ggplot(merge_HRdict_counts,aes(year, MergeCountry)) + 
-scale_x_continuous(limits=c(1976,2018),breaks=seq(1976,2018,21),expand = c(0, 0))+
-  geom_line(aes(x=Year, y=HR, colour ="Mentions"))+
-  geom_line(aes(x=Year, y=regression))+
-    facet_wrap(~MergeCountry,ncol = 15) 
+prediction <-ggplot(merge_HRdict_counts,aes(year, MergeCountry)) + 
+  geom_line(aes(x=Year, y=HR, colour ="Real"))+
+  geom_line(aes(x=Year, y=regression, colour ="Regression"))+
+  scale_x_continuous(limits=c(1976,2018),breaks=seq(1976,2018,21),expand = c(0, 0))+
+    facet_wrap(~MergeCountry,ncol = 15) +
+        scale_color_discrete(name="Lines", labels = c("Real", "Regression"))+
+  labs(title="Human Rights Mentions per Country 1976-2018", 
+             subtitle="Model vs reality", 
+             caption="", 
+             y="Human Tights Mentions",
+             x="Year")+
+        theme(axis.line = element_blank(),
+              panel.grid.major = element_line(colour = 'gray',size=0.2),
+              panel.grid.minor = element_blank(),
+              panel.border = element_blank(),
+              panel.background = element_blank(),
+              plot.title = element_text(size = 16,hjust = 0.5),
+              plot.subtitle = element_text(size = 12,hjust = 0.5),
+              axis.title.x = element_text(size = 12),
+              axis.line.x = element_line(color = "gray40", size = 0.5),
+              axis.line.y = element_line(color = "gray40", size = 0.5),
+              axis.title.y = element_text(size = 12),
+              plot.caption = element_text(size = 8,hjust = 0,margin=margin(t=10)),
+              legend.position = "Bottom")
+
+
+
 ```
 
 
@@ -655,6 +663,10 @@ sent_words <- clean_PTS_ungd1976 %>%
 sent_words_lim <- subset(sent_words, select = c(Year, MergeCountry, doc_id, PTS_A, PTS_A_var, Session, word))
 sent_words_lim
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> eb719b2e8772912c277804c58a80ae6b526be9af
 #find total number of words per country per year in speech 
 wordstotal <- sent_words_lim %>%
   count(doc_id, word, sort = TRUE)
