@@ -15,21 +15,10 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-<<<<<<< HEAD
-library(Amelia)
-library(gridExtra)
-library(quanteda)
-library(tibble)
-library(tidyverse)
-=======
 library(compareDF)
 library(dplyr)
 library(foreign)
-<<<<<<< HEAD
-#install.packages("ggplot2")
-=======
 library(glue)
->>>>>>> eb719b2e8772912c277804c58a80ae6b526be9af
 library(ggplot2)
 library(haven)
 library(lmtest)
@@ -51,81 +40,34 @@ library(tidyverse)
 library(texreg)
 library(textdata)
 library(topicmodels)
->>>>>>> Branch-2
 library(zip)
 ```
 
-<<<<<<< HEAD
-#Sentiment Dictionary
-library(syuzhet)
-```
-=======
 
->>>>>>> Branch-2
 
 # tadaproject
 Human Rights in the UNGA
 
-<<<<<<< HEAD
-### UNGDC data
-```{r}
-dir.create(temp <- tempfile())
-=======
 Using the code of the  The Lancet Countdown report: Nick Watts et al. (2018). "The 2018 report of the Lancet Countdown on health and climate change: shaping the health of nations for centuries to come." The Lancet, 392(10163): 2479-2514. With the UNGA Corpus.
 
 #Data
 
 #Loading data from the UNGDC data
->>>>>>> Branch-2
 
 ### UNGDC data
 ```{r}
 #Upload UNGDC data
 dir.create(temp <- tempfile())
 urlungdc<-'https://dataverse.harvard.edu/api/access/datafile/:persistentId?persistentId=doi:10.7910/DVN/0TJX8Y/PZUURT'
-
-<<<<<<< HEAD
-#MacOs
-#download.file(urlungdc, paste0(temp, '/PZUURT.zip'),exdir = temp) 
-
-#Win
-download.file(urlungdc, paste0(temp, '/PZUURT.zip'),exdir = temp, mode="wb") 
-
-unzip(paste0(temp, '/PZUURT.zip'), exdir = temp)
-=======
 download.file(urlungdc, paste0(temp, '/PZUURT.zip'), mode="wb",
               exdir = temp)
->>>>>>> Branch-2
-
 unzip(paste0(temp, '/PZUURT.zip'), exdir = temp)
-
-<<<<<<< HEAD
-filelist <-list.files(path = root_folder, pattern = '*.txt', recursive = TRUE)
-filenames <- basename(filelist)
-ungdc_files <- data.frame(t(sapply(strsplit(filenames, '_'), 
-                 function(x) c(x[1], x[2], substr(x[3], 1, 4)))))
-colnames(ungdc_files) <- c('country', 'number', 'year')
-ungdc_files$text <- sapply(paste0(root_folder, filelist), function(x) readChar(x, file.info(x)$size))
-ungdc_files<-as.data.frame(ungdc_files)
-ungdc_files$number<-as.integer(as.character(ungdc_files$number))
-ungdc_files$year<-as.integer(as.character(ungdc_files$year))
-ungdc_files$country<-as.character(ungdc_files$country)
-ungdc_files$text<-gsub("\n"," ",ungdc_files$text)
-ungdc_files$text<-gsub("\t"," ",ungdc_files$text)
-ungdc_files$text<-gsub("\r"," ",ungdc_files$text)
-ungdc_files$text<-gsub('"',"",ungdc_files$text)
-
-ungdc_files<-ungdc_files[!ungdc_files$year< 1976, ]
-=======
 ungd_files <- readtext(paste0(temp, "/Converted sessions/*"),
                        docvarsfrom = "filenames", 
                        dvsep="_", 
                        docvarnames = c("Country", "Session", "Year"))
-
 ungd_files$doc_id <- str_replace(ungd_files$doc_id , ".txt", "") %>%
    str_replace(. , "_\\d{2}", "")
->>>>>>> Branch-2
-
 unlink(temp)
 rm(temp)
 rm(urlungdc)
@@ -133,386 +75,6 @@ ungd_files<-ungd_files[!ungd_files$Country == "VAT", ]
 ungd_files<-ungd_files[!ungd_files$Country == "EU", ]
 ```
 
-<<<<<<< HEAD
-### PTS data
-```{r}
-load(url("http://www.politicalterrorscale.org/Data/Files/PTS-2019.RData"))
-
-PTS_2019<-arrange(PTS_2019,Country,Year)
-PTS_2019<-PTS_2019 %>% 
-  group_by(Country) %>% 
-  mutate(.,PTS_S_ch=c(NA,diff(PTS_S)))
-
-PTS_2019<-mutate(PTS_2019,PTS_S_var= ifelse(PTS_S_ch>0,1,0))
-
-PTS_2019<-PTS_2019 %>% 
-  group_by(Country) %>% 
-  mutate(.,PTS_H_ch=c(NA,diff(PTS_H)))
-
-PTS_2019<-mutate(PTS_2019,PTS_H_var= ifelse(PTS_H_ch>0,1,0))
-
-
-PTS_2019<-PTS_2019 %>% 
-  group_by(Country) %>% 
-  mutate(.,PTS_A_ch=c(NA,diff(PTS_A)))
-
-PTS_2019<-mutate(PTS_2019,PTS_A_var= ifelse(PTS_A_ch>0,1,0))
-```
-
-###Misssing values analysis
-```{r}
-
-missmap(PTS_2019, main = "Missing values PTS")
-
-missmap(ungdc_files, main = "Missing values UNGDC")
-```
-
-creating corpus
-
-```{r}
-dfungdc <- ungdc_files
-
-#Corpus
-c_dfungc<-dfungdc
-c_dfungc$text<-dfm(c_dfungc$text)
-
-
-c1_dfungc<-dfungdc
-c1_dfungc$text<-dfm(c1_dfungc$text, remove = stopwords("en"))
-
-
-c2_dfungc<-dfungdc
-c2_dfungc$text<-dfm(c2_dfungc$text, remove = stopwords("en"), remove_punct = TRUE)
-
-c3_dfungc<-dfungdc
-c3_dfungc$text<-dfm(c3_dfungc$text, remove = stopwords("en"), remove_punct = TRUE, stem = TRUE)
-
-c4_dfungc<-dfungdc
-c4_dfungc$text<-dfm(c4_dfungc$text, remove_punct = TRUE, ngrams = 2)
-
-df_c_dfungc<-topfeatures(c_dfungc$text) %>% 
-  as.data.frame() %>% 
-  `colnames<-`("n") %>% 
-  rownames_to_column("Word") %>% 
-  mutate(Words = fct_reorder(Word, n))
-
-g_df_c_dfungc<- ggplot(df_c_dfungc,aes(x=Words,y=n))+
-  geom_col(show.legend = FALSE) +
-  coord_flip() +
-  ggtitle("Original")+
-  theme(plot.title = element_text(size = 8))
-
-
-df_c1_dfungc<-topfeatures(c1_dfungc$text) %>% 
-  as.data.frame() %>% 
-  `colnames<-`("n") %>% 
-  rownames_to_column("Word") %>% 
-  mutate(Words = fct_reorder(Word, n))
-
-g_df_c1_dfungc<- ggplot(df_c1_dfungc,aes(x=Words,y=n))+
-  geom_col(show.legend = FALSE) +
-  coord_flip() +
-  ggtitle("-Stop Words")+
-  theme(plot.title = element_text(size = 8))
-
-df_c2_dfungc<-topfeatures(c2_dfungc$text) %>% 
-  as.data.frame() %>% 
-  `colnames<-`("n") %>% 
-  rownames_to_column("Word") %>% 
-  mutate(Words = fct_reorder(Word, n))
-
-g_df_c2_dfungc<- ggplot(df_c2_dfungc,aes(x=Words,y=n))+
-  geom_col(show.legend = FALSE) +
-  coord_flip() +
-  ggtitle("-StopWords-Punctuation")+
-  theme(plot.title = element_text(size = 8))
-
-df_c3_dfungc<-topfeatures(c3_dfungc$text) %>% 
-  as.data.frame() %>% 
-  `colnames<-`("n") %>% 
-  rownames_to_column("Word") %>% 
-  mutate(Words = fct_reorder(Word, n))
-
-g_df_c3_dfungc<- ggplot(df_c3_dfungc,aes(x=Words,y=n))+
-  geom_col(show.legend = FALSE) +
-  coord_flip() +
-  ggtitle("-StopWords-Punc+Stemming")+
-  theme(plot.title = element_text(size = 8,hjust = 0))
-
-df_c4_dfungc<-topfeatures(c4_dfungc$text) %>% 
-  as.data.frame() %>% 
-  `colnames<-`("n") %>% 
-  rownames_to_column("Word") %>% 
-  mutate(Words = fct_reorder(Word, n))
-
-g_df_c4_dfungc<- ggplot(df_c4_dfungc,aes(x=Words,y=n))+
-  geom_col(show.legend = FALSE) +
-  coord_flip() +
-  ggtitle("-Punctuation +ngrams=2")+
-  theme(plot.title = element_text(size = 8,hjust = 0))
-
-grid.arrange(g_df_c_dfungc, g_df_c1_dfungc, g_df_c2_dfungc,g_df_c3_dfungc,g_df_c4_dfungc,
-             nrow = 2,
-             top="Word Count Review")
-```
-
-<<<<<<< Updated upstream
-=======
-###Misssing values analysis
-
-#Dictionary Analysis and KWIC (25-word context)
-
-## Stage 1 - Human Rights terms
-
-Creating compound tokens from the key terms identified:
- 
-```{r}
-
-listHHRR <- list( c("Human", "Rights")) 
-```
- 
-
-```{r}
-token.compound <- tokens_compound(tok.r, listHHRR, valuetype = "fixed", concatenator = "_")
-```
-
-Creating the dictionary object of Human Rights terms:
-
-```{r}
-HHRR_dict <- dictionary(list(Human.Rights=c("Human Rights", "Rights")))
-```
-
-## Look up Human Rights term counts
-
-Looking up and counting terms from Human Rights in the DFM
-
-```{r}
-?dfm_lookup
-```
-
-DFM_LOOKUP --> Apply a dictionary (HHRR) to a dfm by looking up all dfm features for matches in a a set of dictionary values, and replace those features with a count of the dictionary's keys.
-
-```{r}
-dfm_1 <- dfm(token.compound)
-
-HHRR_dfm <- dfm_lookup(dfm_1, HHRR_dict, valuetype = "fixed")
-```
-
-```{r}
-head(HHRR_dfm)
-```
-
-Data Frame
-
-```{r}
-#creating a data frame --> CHECK IF THIS IS NECESARY IN THIS POINT OF THE PROJECT
-Human.Rights <- convert(HHRR_dfm, to = "data.frame")
-
-#converting documentID into two columns - country and year
-HHRR_counts <- Human.Rights %>%
-  separate(document, c("country", "year"), "_")
-
-#year as numeric
-HHRR_counts$year <- as.numeric(HHRR_counts$year)
-
-HHRR_counts <- plyr::rename(HHRR_counts, c("Human.Rights"="HHRR"))
-```
-
-```{r}
-head(HHRR_counts)
-```
-
-
-
-## Presentation of results
-
-### Map for 2017 of HHRR
-
-Keeping only country-years with at least one mention of HHRR
-
-
-```{r}
-mentions_HHRR <- subset(HHRR_counts, "human rights"!=0)
-```
-
-```{r}
-head(mentions_HHRR)
-```
-
-
-
-Error in joinCountryData2Map --> check the packages
-
-```{r}
-
-map <- joinCountryData2Map(subset(mentions_HHRR, year==2017), joinCode="ISO3", nameJoinColumn="country")
-
-new_world <- subset(map, continent != "Antarctica")
-
-pdf("worldmap_2017_health.pdf", width = 7, height = 3)
-
-par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
-
-mapParams <- mapCountryData(new_world, nameColumnToPlot="HHRR", 
-                            mapTitle="2017 UN General Debate: HHRR", 
-                            catMethod = "categorical", 
-                            colourPalette = "heat", 
-                            oceanCol = "lightblue", 
-                            missingCountryCol = "white", 
-                            addLegend="FALSE")
-
-do.call( addMapLegendBoxes, c(mapParams,title="Number of mentions", x = "left", cex=0.5))
-
-dev.off()
-```
-
-## Time series of total counts plot
-
-### Total counts
-
-```{r}
-# calculating the total number of mentions by year
-sum <- summarise(group_by(country2Region(count), year), count = sum(Human.Rights), mean = mean(Human.Rights))
-
-ggplot(sum, aes(x=year)) +
-  theme_bw() +
-  geom_line(aes(y= HHRR_count), colour = "blue", alpha = 0.9) +
-  ylab("Total number of references per UNGD session") + xlab("Year") + 
-#  scale_y_continuous(limits=c(0, 140), breaks = c(1, 50, 100, 134)) +
-  scale_x_continuous(limits=c(1970, 2017), breaks = c(1970, 1988, 2000, 2009,2014, 2017)) +
-   annotate("text", x = 1993, y = 250, label = "Human Rights", colour = "blue")
-
-```
-
-
-
->>>>>>> Stashed changes
-
-### add LSD Lexicoder Sentiment Dictionary
-
-
-install.packages("quanteda")
-install.packages("readtext")
-install.packages("devtools")
-devtools::install_github("quanteda/quanteda.corpora")
-packageVersion("quanteda")
-install.packages("newsmap")
-install.packages("tm")
-install.packages("NLP")
-install.packages("tibble")
-install.packages("slam")
-
-
-example(data_dictionary_LSD2015)
-
-### add H3 Dictionaries
-
-```{r}
-dict_intmilitary <- read.delim("https://raw.githubusercontent.com/openeventdata/tabari_dictionaries/master/IntMilitGroups.090831.actors.txt")
-
-```
-
-### Create Human Rights Dictionary
-
-```{r}
-library(quanteda)
-
-#create human rights lists from the three sources
-
-HRlistFariss <- list( c("kill"), c("forc"), c("arm"), c("group"), c("civilian"), c("human"), c("secur"), c("disappear"), c("attack"), c("execut") , c("tortur"), c("member"), c("includ"), c("arrest"), c("prison"), c("polit"), c("amnesti"), c("trial"), c("releas"), c("imprison"), c("sentenc"), c("charg"), c("conscience"), c("polic"), c("offic"), c("illtreat"), c("death"), c("court"), c("alleg"), c("law"), c("service"), c("concern"), c("appeal"), c("servic"), c("committee"),    c("militari"), c("area"), c("continu"), c("section"), c("state"), c("dure"), c("arrest"), c("accord"), c("offici"), c("presid"), c("opposit"), c("howev"), c("parti"), c("author"), c("law"), c("provid"), c("gener"), c("public"), c("constitut"), c("employ"), c("women"), c("right"), c("respect"), c("freedom"), c("prohibit"), c("case"), c("ngo"), c("tortur"), c("gener"), c("labor"), c("detain"), c("releas"), c("elect"), c("local"), c("presidenti"), c("region"), c("mani"), c("regim"), c("nation"), c("ethnic"), c("union"), c("practic"), c("work"), c("foreign"), c("children"), c("investig"), c("relig"), c("islam"), c("roma"), c("worker"), c("traffic"), c("feder"), c("parliament"))
-
-HRlistGreene <- list(c("committed"), c("victims"), c("populations"), c("scale"), c("armed"), c("army"), c("commanders"), c("conscripted"), c("assassinations"), c("massacres"), c("internally", "displaced"), c("food"), c("humanitarian"), c("landmines"), c("money"), c("raped"), c("disappearances"), c("frequently"), c("numerous"), c("widespread"), c("common"), c("regularly"), c("routinely"), c("systematic"), c("extensive"))
-
-HRlistWatanabe <- list(c("human", "rights"), c("violat"), c("race"), c("dignit"), c("protect"), c("citizen"), c("educat"), c("child"), c("refugee"), c("communit"), c("people"), c("responsibl"), c("health"), c("world"))
-
-HRlist <- do.call(c, list(HRlistFariss, HRlistGreene, HRlistWatanabe))
-summary(HRlist)
-
-#create dictionaries from the three sources
-
-dict_HRFariss <- dictionary(list(human_rightsF = c("kill", "forc", "arm", "group", "civilian", "human", "secur", "disappear", "attack", "execut" , "tortur", "member", "includ", "arrest", "prison", "polit", "amnesti", "trial", "releas", "imprison", "sentenc", "charg", "conscience", "polic", "offic", "illtreat", "death", "court", "alleg", "law", "service", "concern", "appeal", "servic", "committee", "militari", "area", "continu", "section", "state", "dure", "arrest", "offici", "presid", "opposit", "parti", "author", "law", "provid", "gener", "public", "constitut", "employ", "women", "right", "respect", "freedom", "prohibit", "case", "ngo", "tortur", "gener", "labor", "detain", "releas", "elect", "local", "presidenti", "region", "mani", "regim", "nation", "ethnic", "union", "practic", "work", "foreign", "children", "investig", "relig", "islam", "roma", "worker", "traffic", "feder", "parliament")))
-
-dict_HRGreene <- dictionary(list(human_rightsG = c("commit", "victim", "popul", "scale", "armi", "command", "conscript", "assassin", "massacr", "intern_displac", "food", "humanitarian", "landmin", "money", "rape", "disappear", "widespread", "systemat", "extens")))
-
-#checking the stemmed version of dict_HRGreene
-char_HRGreene <- as.character(dict_HRGreene)
-toks_HRGreene <- tokens(char_HRGreene)
-toks_HRGreene
-remove_HRGreene <- tokens(toks_HRGreene, remove_punct = TRUE)
-remove_HRGreene
-tokens_wordstem(remove_HRGreene)
-
-dict_HRWatanabe <- dictionary(list(human_rightsW = c("human_rights", "violat", "race", "dignit", "protect", "citizen", "educat", "child", "refugee", "communit", "people", "responsibl", "health", "world")))
-
-#combine the dictionaries
-HRdict <- c(dict_HRGreene["human_rightsG"], dict_HRFariss["human_rightsF"], dict_HRWatanabe["human_rightsW"])
-HRdict
-
-###please check if all words should be used
-```
-
-Regression analysis with human rights dictionary
-
-```{r}
-
-
-
-
-
-
-
-```
-
-
-ADD actors and agents dictionary 
-
-```{r}
-?dictionary
-?download.file
-?load
-
-tempagents <- tempfile()
-fileagents <- download.file("", tempagents)
-X <- read.csv(url())
-fileagents <- read.csv("https://raw.githubusercontent.com/juribep5/tadaproject/master/agents.csv", header = TRUE, sep = ",")
-fileagents = subset(fileagents, select = -c(note))
-colnames(fileagents) <- c("agent", "topic")
-summary(fileagents)
-str(fileagents)
-listagents <- list
-list
-
-dictagents <- dictionary(list(agents = fileagents, tolower = TRUE))
-fileagents
-str(listagents)
-
-
-
-
-
-
-
-
-
-
-
-```
-
-ungd_files <- readtext("Converted sessions/*", 
-                                 docvarsfrom = "filenames", 
-                                 dvsep="_", 
-                                 docvarnames = c("Country", "Session", "Year"))
-
-
-ungd_files$doc_id <- str_replace(ungd_files$doc_id , ".txt", "") %>%
-   str_replace(. , "_\\d{2}", "")
-
-
-
-Descriptive analysis with human rights dictionary
---> this needs a tokenized and corpus mode of our files so I will leave this here
-
-=======
 
 ### PTS data
 ```{r}
@@ -520,52 +82,36 @@ load(url("http://www.politicalterrorscale.org/Data/Files/PTS-2019.RData"))
 PTS_2019<-arrange(PTS_2019,Country,Year)
 PTS_2019$Country<-as.character(PTS_2019$Country)
 PTS_2019$WordBank_Code_A<-as.character(PTS_2019$WordBank_Code_A)
-
 PTS_2019<-PTS_2019 %>% 
   mutate(.,WordBank_Code_A=ifelse(Country=="Czechoslovakia", "CSK", WordBank_Code_A))
-
 PTS_2019<-PTS_2019 %>% 
   mutate(.,WordBank_Code_A=ifelse(Country=="Romania", "ROU", WordBank_Code_A))
-
 PTS_2019<-PTS_2019 %>% 
   mutate(.,WordBank_Code_A=ifelse(Country=="Congo, the Democratic Republic of the", "COD", WordBank_Code_A))
-
 PTS_2019<-PTS_2019 %>% 
   mutate(.,WordBank_Code_A=ifelse(Country=="Andorra", "AND", WordBank_Code_A))
-
 PTS_2019<-PTS_2019 %>% 
   mutate(.,WordBank_Code_A=ifelse(Country=="German Democratic Republic", "DDR", WordBank_Code_A))
-
 PTS_2019<-PTS_2019 %>% 
   mutate(.,WordBank_Code_A=ifelse(Country=="European Union", "EU", WordBank_Code_A))
-
 PTS_2019<-PTS_2019 %>% 
   mutate(.,WordBank_Code_A=ifelse(Country=="Yemen People's Republic", "YDYE", WordBank_Code_A))
-
 PTS_2019<-PTS_2019 %>% 
   mutate(.,WordBank_Code_A=ifelse(Country=="Palestine, State of", "PSE", WordBank_Code_A))
-
 PTS_2019<-PTS_2019 %>% 
   mutate(.,WordBank_Code_A=ifelse(Country=="Timor-Leste", "TLS", WordBank_Code_A))
-
 PTS_2019<-PTS_2019[!PTS_2019$WordBank_Code_A == "EU", ]
-
 PTS_2019<-PTS_2019 %>% 
   group_by(Country) %>% 
   mutate(.,PTS_S_ch=c(NA,diff(PTS_S)))
-
 PTS_2019<-mutate(PTS_2019,PTS_S_var= ifelse(PTS_S_ch>0,1,0))
-
 PTS_2019<-PTS_2019 %>% 
   group_by(Country) %>% 
   mutate(.,PTS_H_ch=c(NA,diff(PTS_H)))
-
 PTS_2019<-mutate(PTS_2019,PTS_H_var= ifelse(PTS_H_ch>0,1,0))
-
 PTS_2019<-PTS_2019 %>% 
   group_by(Country) %>% 
   mutate(.,PTS_A_ch=c(NA,diff(PTS_A)))
-
 PTS_2019<-mutate(PTS_2019,PTS_A_var= ifelse(PTS_A_ch>0,1,0))
 ```
 
@@ -577,7 +123,6 @@ PTS_2019<-mutate(PTS_2019,PTS_A_var= ifelse(PTS_A_ch>0,1,0))
 PTS_2019 %>%
       group_by(Year) %>%
       summarise(n = n())
-
 ungd_files %>%
       group_by(Year) %>%
       summarise(n = n())
@@ -587,23 +132,16 @@ ungd_files %>%
 #compare country
 colnames(ungd_files)[colnames(ungd_files)=="Country"] <- "MergeCountry"
 colnames(PTS_2019)[colnames(PTS_2019)=="WordBank_Code_A"] <- "MergeCountry"
-
 PTS_2019 %>%
       group_by(MergeCountry) %>%
       summarise(n = n())
-
 ungd_files %>%
       group_by(MergeCountry) %>%
       summarise(n = n())
-
 merge_PTS_ungd <- merge(PTS_2019, ungd_files, by = c('Year','MergeCountry'), all=TRUE)
-
 merge_PTS_ungd1976 <- subset(merge_PTS_ungd, !merge_PTS_ungd$Year<1976)
-
 NA_PTS_ungd1976 <- subset(merge_PTS_ungd1976, is.na(merge_PTS_ungd1976$MergeCountry))
-
 mergeNA_PTS_ungd_1976 <- subset(merge_PTS_ungd1976, !is.na(merge_PTS_ungd1976$MergeCountry))
-
 tail(mergeNA_PTS_ungd_1976)
 head(NA_PTS_ungd1976,20)
 tail(NA_PTS_ungd1976)
@@ -616,14 +154,9 @@ PTS_20199<-PTS_2019
 PTS_20199$PTS_A_ch<-abs(PTS_20199$PTS_A_ch)
 PTS_20199<-subset(PTS_20199,!is.na(PTS_20199$PTS_A_ch))
 summary(PTS_20199$PTS_A_ch)
-
 PTS_20199<-aggregate(PTS_20199$PTS_A_ch, by=list(Category=PTS_20199$MergeCountry), FUN=sum)
-
-
 worldok<-joinCountryData2Map(PTS_20199,joinCode = "ISO3", nameJoinColumn = "Category", nameCountryColumn = "Country", suggestForFailedCodes = FALSE, mapResolution = "coarse", projection = NA, verbose = TRUE)
-
 new_world <- subset(worldok, continent != "Antarctica")
-
 mapCountryData(new_world, nameColumnToPlot="x",mapTitle="Changes in PTS by Country 1976-2018",numCats=28, catMethod="pretty", colourPalette="heat",addLegend="TRUE", missingCountryCol="#3B3939",lwd = 0.1)  
 ```
 
@@ -659,9 +192,7 @@ clean_toks_UNGD <- tokens(clean_ungd_corpus, what = "word",
 
 ```{r}
 lower_UNGD <- tokens_tolower(clean_toks_UNGD)
-
 stop_UNGD <- tokens_select(lower_UNGD, stopwords("english"), selection = "remove", padding = FALSE)
-
 ngram_UNGD <- tokens(stop_UNGD, ngrams = c(1:2), include_docvars = TRUE)
 ```
 
@@ -732,12 +263,10 @@ merge_HHRRcounts1<-merge_HHRRcounts %>%
                       subset(!is.na(Region)) %>% 
                       group_by(Region,Year) %>%
                       summarise_at("HHRR",funs(mean(., na.rm=TRUE)))
-
 merge_HHRRcounts1$Region<-factor(merge_HHRRcounts1$Region, labels=c("East Asia and Pacific","Europe and Central Asia", "Latin America and Caribbean", "Middle East and North Africa","North America","South Asia","Sub-Saharan Africa" ),levels=c("eap","eca","lac","mena","na","sa","ssa"))
 levels(merge_HHRRcounts1$Region)
 ggplot(merge_HHRRcounts1,aes(x=Year,y=HHRR, color=Region))+
   geom_line() +labs(title="Mentions of Human Rights in UNGD speeches per region", x="Year", y="Mentions of Human Rights")
-
 ```
 
 #Baseline
@@ -749,13 +278,10 @@ Linear regression model between changes in PTS (State Department) and mentions o
 ```{r}
 ModelHHRR_S <- lm (HHRR ~ factor(PTS_S) + PTS_S_var + factor(PTS_S)*PTS_S_var, data = merge_HHRRcounts)
 #PTS_S significant and negative, but the change in the PTS is not significant nor the interaction
-
 ModelHHRR_A <- lm (HHRR ~ factor(PTS_A) + PTS_A_var + factor(PTS_A)*PTS_A_var, data = merge_HHRRcounts)
 #PTS_A significant and negative, but the change in the PTS is not significant nor the interaction
-
 ModelHHRR_H <- lm (HHRR ~ PTS_H + PTS_H_var + PTS_H*PTS_H_var, data = merge_HHRRcounts)
 #PTS_H insignificant
-
 screenreg(ModelHHRR_A)
 ```
 
@@ -767,9 +293,7 @@ screenreg(ModelHHRR_A)
 
 ```{r}
 ModelHHRR_S_fe <- plm (HHRR ~ PTS_S + PTS_S_ch + PTS_S*PTS_S_ch, data = merge_HHRRcounts, index = c("MergeCountry", "Year"), effect = "twoways", model = "within")
-
 ModelHHRR_A_fe <- plm (HHRR ~ factor(PTS_A) + PTS_A_var + factor(PTS_A)*PTS_A_var, data = merge_HHRRcounts, index = c("MergeCountry", "Year"), effect = "twoways", model = "within")
-
 screenreg(list(ModelHHRR_A_fe, ModelHHRR_A))
 ```
 
@@ -779,7 +303,6 @@ screenreg(list(ModelHHRR_A_fe, ModelHHRR_A))
 Converting PTS_A in a categorical variable
 ```{r}
 plot_HHRR <- merge_HHRRcounts
-
 plot_HHRR$PTS_A <- factor(plot_HHRR$PTS_A, labels = c("1 PTS", "2 PTS", "3 PTS", "4 PTS", "5 PTS"), levels= c(1,2,3,4,5))
 ```
 
@@ -924,9 +447,7 @@ Linear regression model between changes in PTS (Amnesty International) and menti
 
 ```{r}
 ModelHRdict_S <- lm (HR ~ PTS_S + PTS_S_ch + PTS_S*PTS_S_ch, data = merge_HRdict_counts)
-
 ModelHRdict_A <- lm (HR ~ factor(PTS_A) + PTS_A_var + factor(PTS_A)*PTS_A_var, data = merge_HRdict_counts)
-
 ModelHRdict_H <- lm (HR ~ PTS_H + PTS_H_ch + PTS_H*PTS_H_ch, data = merge_HRdict_counts)
 ```
 
@@ -995,16 +516,13 @@ Converting HHRR mentions in the Binary Dictionary into a binary variable (1=the 
 ```{r}
 binary_HHRRcounts <- merge_HHRRcounts
 binary_HHRRcounts$HHRR <- as.factor(ifelse(binary_HHRRcounts$HHRR>1,1,0))
-
 summary(binary_HHRRcounts$HHRR)
 ```
 
 Running the Binary Model for the Amnesty PTS database
 ```{r}
 Binary_ModelHHRR_A <- glm (HHRR ~ PTS_A + PTS_A_ch + PTS_A*PTS_A_ch, family = binomial(link = "logit"), data = binary_HHRRcounts)
-
 screenreg(Binary_ModelHHRR_A)
-
 #PTS_A significant and negative, but the change in the PTS is not significant nor the interaction
 ```
 
@@ -1018,16 +536,13 @@ Converting HHRR mentions in the Sophisticated HHRR Dictionary into a binary vari
 
 ```{r}
 binary_HRdict_counts <- merge_HRdict_counts
-
 binary_HRdict_counts$HR <- as.factor(ifelse(binary_HRdict_counts$HR>1,1,0))
-
 summary(binary_HRdict_counts$HR)
 ```
 
 Running the Binary Model for the State Department PTS database
 ```{r}
 Binary_ModelHRdict_A <- glm (HR ~ PTS_A + PTS_A_ch + PTS_A*PTS_A_ch, family = binomial(link = "logit"), data = binary_HRdict_counts)
-
 screenreg(Binary_ModelHRdict_A)
 ```
 
@@ -1043,12 +558,10 @@ screenreg(list(ModelHHRR_A, ModelHRdict_A))
 ```{r}
 names(ModelHRdict_A)
 print(ModelHRdict_A$coefficients)
-
 a<-ModelHRdict_A$coefficients["(Intercept)"]
 ModelHRdict_A$coefficients[2]
 ModelHRdict_A$coefficients[3]
 ModelHRdict_A$coefficients[4]
-
 merge_HRdict_counts$regression<-ModelHRdict_A$coefficients["(Intercept)"]+ ModelHRdict_A$coefficients[2]*merge_HRdict_counts$PTS_A+ModelHRdict_A$coefficients[3]*merge_HRdict_counts$PTS_A_var+ModelHRdict_A$coefficients[4]*merge_HRdict_counts$PTS_A*merge_HRdict_counts$PTS_A_var
 ```
 
@@ -1077,9 +590,6 @@ prediction <-ggplot(merge_HRdict_counts,aes(year, MergeCountry)) +
               axis.title.y = element_text(size = 12),
               plot.caption = element_text(size = 8,hjust = 0,margin=margin(t=10)),
               legend.position = "Bottom")
-
-
-
 ```
 
 
@@ -1088,33 +598,29 @@ prediction <-ggplot(merge_HRdict_counts,aes(year, MergeCountry)) +
 
 ```{r}
 #get sentiment analysis with four different dictionaries: syuzhet (1), afinn, bing, and nrc
-
 #tokenise with tidytext
-
 sent_words <- clean_PTS_ungd1976 %>%
   group_by(MergeCountry) %>%
   ungroup() %>%
   unnest_tokens(word, text) %>%
   anti_join(stop_words)
   #count(doc_id, word, sort = TRUE)
-
+str(sent_words)
 sent_words_lim <- subset(sent_words, select = c(Year, MergeCountry, doc_id, PTS_A, PTS_A_var, Session, word))
 sent_words_lim
-
-<<<<<<< HEAD
-=======
-
->>>>>>> eb719b2e8772912c277804c58a80ae6b526be9af
 #find total number of words per country per year in speech 
 wordstotal <- sent_words_lim %>%
   count(doc_id, word, sort = TRUE)
 str(wordstotal)
-
 wordstotal <- wordstotal %>%
   bind_tf_idf(word, doc_id , n) %>%
   arrange(desc(tf_idf))
 wordstotal
-
+##merge tf idf back with the dataset
+sent_tfidf <- merge(sent_words, wordstotal, by = c('doc_id','word'), all=TRUE)
+head(sent_tfidf)
+sent_words_lim <- subset(sent_words, select = c(Year, MergeCountry, doc_id, PTS_S, PTS_S_var, Session, word))
+head(sent_words_lim)
 ```
 ### Add sentiment dictionaries and dictionary counts
 
@@ -1125,61 +631,48 @@ sentiment_plotn <-
   inner_join(get_sentiments("bing")) %>% 
   filter(sentiment == "negative") %>%
   count(Year, MergeCountry, sentiment)
-
 library(ggplot2)
 #positive emotions UN speeches - bing
-
 sentiment_plotp <-
   sent_words_lim %>%
   inner_join(get_sentiments("bing")) %>% 
   filter(sentiment == "positive") %>%
   count(Year, MergeCountry, sentiment)
-
 par(mfrow=c(2,1), mar=c(4, 4.1, 4.1, 2.1))  
 ggplot(sentiment_plotp, aes(x=as.numeric(Year), y=n))+
   geom_smooth(color="red")+
   theme_minimal()+
   ylab("Frequency of Positive Words in UN speeches")+
   xlab("Year")
-
 ggplot(sentiment_plotn, aes(x=Year, y=n))+
   geom_smooth(color="blue")+
   geom_point(color="red")+
   theme_minimal()+
   ylab("Frequency of Negative Words in UN speeches")+
   xlab("Year")
-
 ggplot(sentiment_plotp, aes(x=as.numeric(Year), y=n))+
   geom_smooth(color="red")+
   geom_smooth(data=sentiment_plotn, color="blue")
-
 ###no sentiment filter - bing
 count_UNGDsentiment_bing <-
   sent_tfidf %>%
   inner_join(get_sentiments("bing")) %>% 
   count(Year, MergeCountry, sentiment)
-
 count_UNGDsentiment_bing
-
-
 ##afinn
 count_UNGDsentiment_afinn <- sent_words_lim %>% 
   inner_join(get_sentiments("afinn")) %>%
   group_by(MergeCountry, Year) %>%
   summarise(sentiment = mean(value)) %>%
   mutate(method = "AFINN") 
-
 count_UNGDsentiment_afinn
-
 #count sentiment dictionary nrc
 count_UNGDsentiment_nrc <- sent_words_lim %>%
   inner_join(get_sentiments("nrc")) %>%
   group_by(MergeCountry, Year) %>%
   count (Year, MergeCountry, sentiment) %>%
   mutate(method = "nrc")
-
 count_UNGDsentiment_nrc
-
 ```
 
 #play with subsets
@@ -1192,88 +685,69 @@ bing_ex <- sent_words_lim %>%
   group_by(MergeCountry) %>% 
   mutate(method = "BING")
 bing_ex
-
 ##nrc
 nrc_anger <- get_sentiments("nrc") %>% 
   filter(sentiment == "anger")
-
 sent_words_lim %>%
   filter(MergeCountry == "USA") %>%
   inner_join(nrc_anger) %>%
   count(word, sort = TRUE)
-
 ```
 
 ```{r}
 #Merge sentiment dictionaries with the MergeNA_PTS_ungd_1976 data set
-
 head(merge_HRdict_counts)
 #merged dataset with both dictionaries: HHRRterm and HRdict
-
 colnames(count_UNGDsentiment_bing)[colnames(count_UNGDsentiment_bing)=="sentiment"] <- "sentiment_bing"
 colnames(count_UNGDsentiment_bing)[colnames(count_UNGDsentiment_bing)=="n"] <- "n_bing"
 head(count_UNGDsentiment_bing)
-
-
-
 #merging variables are names the same
-
 merge_sentiment_counts1 <- merge(merge_HRdict_counts, count_UNGDsentiment_bing, by = c('MergeCountry','Year'), all=TRUE)
 head(merge_sentiment_counts1)
-
-
 ##afinn
 head(count_UNGDsentiment_afinn)
 colnames(count_UNGDsentiment_afinn)[colnames(count_UNGDsentiment_afinn)=="method"] <- "method_afinn"
 colnames(count_UNGDsentiment_afinn)[colnames(count_UNGDsentiment_afinn)=="n"] <- "n_afinn"
 colnames(count_UNGDsentiment_afinn)[colnames(count_UNGDsentiment_afinn)=="sentiment"] <- "sentiment_afinn"
-
 merge_sentiment_counts2 <- merge(merge_HRdict_counts, count_UNGDsentiment_afinn, by = c('MergeCountry','Year'), all=TRUE)
 head(merge_sentiment_counts2)
-
 ##nrc
 head(count_UNGDsentiment_nrc)
 colnames(count_UNGDsentiment_nrc)[colnames(count_UNGDsentiment_nrc)=="method"] <- "method_nrc"
 colnames(count_UNGDsentiment_nrc)[colnames(count_UNGDsentiment_nrc)=="n"] <- "n_nrc"
 colnames(count_UNGDsentiment_nrc)[colnames(count_UNGDsentiment_nrc)=="sentiment"] <- "sentiment_nrc"
-
 merge_sentiment_counts3<- merge(merge_HRdict_counts, count_UNGDsentiment_nrc, by = c('MergeCountry','Year'), all=TRUE)
 head(merge_sentiment_counts3)
-
 ```
 
 
 #graphs on dataset 
 
 ```{r}
+summary(merge_sentiment3$PTS_S_var)
 ggplot(merge_sentiment_counts1, aes(x=as.numeric(PTS_S_var), y=n_bing))+
   geom_jitter(color="red")+
   theme_minimal()+
   ylab("Frequency of Sentiment Words in UN speeches")+
   xlab("Change in PTS")
 #the count of sentiments (both negative and positive) or emotional speech becomes less frequent with bing
-
 ggplot(merge_sentiment_counts2, aes(x=as.numeric(PTS_S_var), y=sentiment_afinn))+
   geom_jitter(color="red")+
   theme_minimal()+
   ylab("Value of Sentiment Words in UN speeches")+
   xlab("Change in PTS")
 #the sentiment value becomes more negative when PTS changes positively
-
 ggplot(subset(merge_sentiment_counts1,!is.na(PTS_S_var)), aes(x=Year, y=n_bing, colour=factor(PTS_S_var)))+
     geom_smooth(method="loess",aes(color=factor(PTS_S_var))) + 
   theme_minimal()+
   ylab("Value of Sentiment Words in UN speeches")+
   xlab("Change in PTS")
-
 summary(merge_sentiment_counts2$sentiment_afinn)
 ggplot(subset(merge_sentiment_counts2,!is.na(PTS_S_var)), aes(x=Year, y=sentiment_afinn, colour=factor(PTS_S_var)))+
     geom_smooth(method="loess",aes(color=factor(PTS_S_var))) + 
   theme_minimal()+
   ylab("Value of Sentiment Words in UN speeches")+
   xlab("Change in PTS")
-
-
 ggplot(subset(merge_sentiment_counts2,!is.na(PTS_A)), aes(x=Year, y=sentiment_afinn, colour=factor(PTS_A)))+
     geom_smooth(method="loess",aes(color=factor(PTS_A)))+  
  scale_x_continuous(limits=c(1976,2020),breaks=seq(1976,2018,12),expand = c(0, 0))+
@@ -1296,7 +770,6 @@ ggplot(subset(merge_sentiment_counts2,!is.na(PTS_A)), aes(x=Year, y=sentiment_af
               axis.title.y = element_text(size = 12),
               plot.caption = element_text(size = 8,hjust = 0,margin=margin(t=10)),
               legend.position = "bottom")
-
 ggplot(subset(merge_sentiment_counts2,!is.na(PTS_A_var)), aes(factor(PTS_A), sentiment_afinn))+
   geom_boxplot(varwidth=T, aes(fill=factor(PTS_A_var))) +
   scale_fill_discrete(name = "Change in PTS Score", labels=c("No","Yes"))+
@@ -1318,8 +791,6 @@ ggplot(subset(merge_sentiment_counts2,!is.na(PTS_A_var)), aes(factor(PTS_A), sen
               axis.title.y = element_text(size = 12),
               plot.caption = element_text(size = 8,hjust = 0,margin=margin(t=10)),
               legend.position = "bottom")
-
-
 ggplot(subset(merge_sentiment_counts2,!is.na(PTS_S)), aes(sentiment_afinn))+
     geom_density(aes(fill=factor(PTS_S)), alpha=0.2)
 ```
@@ -1335,10 +806,8 @@ Linear regression model between changes in PTS (State Department) and mentions o
 head(merge_sentiment_counts1)
 merge_sentiment_counts1$PTS_A_dummy <- factor(merge_sentiment_counts1$PTS_A)
 is.factor(merge_sentiment_counts1$PTS_A_dummy)
-
 merge_sentiment_counts2$PTS_A_dummy <- factor(merge_sentiment_counts2$PTS_A)
 is.factor(merge_sentiment_counts2$PTS_A_dummy)
-
 merge_sentiment_counts3$PTS_A_dummy <- factor(merge_sentiment_counts3$PTS_A)
 is.factor(merge_sentiment_counts3$PTS_A_dummy)
 ```
@@ -1349,82 +818,81 @@ is.factor(merge_sentiment_counts3$PTS_A_dummy)
 ###regressions bing - baseline in sentiment analysis
 
 ```{r}
-
 ###packages
-#install.packages ("plm")
+install.packages ("plm")
 library(plm)
-
 ###positive bing 
+Modelbing_S_pos <- plm (n_bing ~ PTS_S_dummy + PTS_S_var + PTS_S_dummy*PTS_S_var, data = subset(merge_sentiment_counts1, sentiment_bing == "positive"), , na.action = na.exclude, effect = "twoways", model = "within")
+screenreg(Modelbing_S_pos)
 Modelbing_A_pos <- plm (n_bing ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts1, sentiment_bing == "positive"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelbing_A_pos)
-
+Modelbing_H <- plm (n_bing ~ PTS_H_dummy + PTS_H_var + PTS_H_dummy*PTS_H_var, data = subset(merge_sentiment_counts1, sentiment_bing == "positive"), effect = "twoways", model = "within")
+screenreg(Modelbing_H)
 #for A and S, only PTS dummies are significant, so a higher PTS leads to more positive sentiments in UNGDC speeches
-
-
 ###negative bing
+Modelbing_S_neg <- plm (n_bing ~ PTS_S_dummy + PTS_S_var + PTS_S_dummy*PTS_S_var, data = subset(merge_sentiment_counts1, sentiment_bing == "negative"), effect = "twoways", model = "within")
+screenreg(Modelbing_S_neg)
+#PTS leads to more negative sentiment in speeches
 Modelbing_A_neg <- plm (n_bing ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts1, sentiment_bing == "negative"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelbing_A_neg)
 #PTS leads to more negative sentiment in speeches
-
-#in general
+###regressions with sentiment in general
+Modelbing_S <- lm (n_bing ~ PTS_S_dummy + PTS_S_var + PTS_S_dummy*PTS_S_var, data = merge_sentiment_all)
+screenreg(Modelbing_S)
 Modelbing_A <- lm (n_bing ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, na.action = na.exclude, data = merge_sentiment_counts1)
 screenreg(Modelbing_A)
-
+Modelbing_H <- lm (n_bing ~ PTS_H_dummy + PTS_H_var + PTS_H_dummy*PTS_H_var, data = merge_sentiment_all)
+screenreg(Modelbing_H)
 #all coefficients significant, also in the interaction term
-
 ```
 #Sentiment Analysis Regression
 ##2: regressions with model afinn and nrc
 
 ```{r}
 ###regressions afinn
-
+head(merge_sentiment_counts2,20)
+summary(merge_sentiment_counts2$sentiment_afinn)
+Modelafinn_S <- plm (sentiment_afinn ~ PTS_S_dummy + PTS_S_var + PTS_S_dummy*PTS_S_var, data = merge_sentiment_counts2, effect = "twoways", model = "within")
+screenreg(Modelafinn_S)
+#dummys PTS 4 and 5 are significant and negative, so sentiment becomes more negative if a country has a higher score
+#interaction between PTS2 and change is significant and negative
 Modelafinn_A <- plm (sentiment_afinn ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = merge_sentiment_counts2, na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelafinn_A)
 #only dummies significant and negative
-
 ```
 
 ```{r}
-
 ###regressions nrc
 #--> i need to group them by the sentiment of anger etc. in each of the windows...
-
 ##ANGER
+head(merge_sentiment_all$sentiment_nrc, 20)
+Modelnrc_S <- plm (n_nrc ~ PTS_S_dummy + PTS_S_var + PTS_S_dummy*PTS_S_var, data = subset(merge_sentiment_all, sentiment_nrc == "anger"), na.action = na.exclude, effect = "twoways", model = "within")
+screenreg(Modelnrc_S)
+#dummies positive significant: more anger talk, change alone is significant and negative, interaction with dummy 2 significant and positive 
 Modelnrc_anger <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "anger"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelnrc_anger)
 #dummies positive and significant
-
 Modelnrc_A_disgust <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "disgust"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelnrc_A_disgust)
 #significant
-
 Modelnrc_A_sadness <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "sadness"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelnrc_A_sadness)
-
 Modelnrc_A_fear <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "fear"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelnrc_A_fear)
 #interaction term positive and negative
-
 Modelnrc_A_negative <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "negative"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelnrc_A_negative)
-
 #positive categories
 Modelnrc_A_positive <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "positive"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelnrc_A_positive)
-
 Modelnrc_A_anticip <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "anticipation"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelnrc_A_anticip)
-
 Modelnrc_A_trust <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "trust"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelnrc_A_trust)
-
 Modelnrc_A_surprise <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "surprise"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelnrc_A_surprise)
-
 Modelnrc_A_joy <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "joy"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelnrc_A_joy)
-
 summary(merge_sentiment_counts3$sentiment_nrc)
 #significant
 ```
@@ -1435,9 +903,7 @@ summary(merge_sentiment_counts3$sentiment_nrc)
 ####Graph plots - keyness
 
 ```{r}
-
 ##EXPORT REGRESSION RESULTS
-
 stargazer(Modelbing_A_pos, Modelbing_A_neg, Modelafinn_A, Modelnrc_anger, Modelnrc_A_disgust, Modelnrc_A_fear, Modelnrc_A_surprise,
           align=TRUE,
           type = 'text',
@@ -1462,14 +928,9 @@ merge_HRdict_counts1<-merge_HRdict_counts %>%
                       group_by(Region,Year) %>%
                       summarise_at("HHRR",funs(mean(., na.rm=TRUE)))
 merge_HRdict_counts1$Region<-factor(merge_HRdict_counts1$Region, labels=c("East Asia and Pacific","Europe and Central Asia", "Latin America and Caribbean", "Middle East and North Africa","North America","South Asia","Sub-Saharan Africa" ),levels=c("eap","eca","lac","mena","na","sa","ssa"))
-
 levels(merge_HRdict_counts1$Region)
-
 ggplot(merge_HRdict_counts1,aes(x=Year,y=HHRR, color=Region))+
   geom_line()
-
-
-
 #HR
 merge_HRdict_counts2<-merge_HRdict_counts %>% 
                       subset(!is.na(Region)) %>% 
@@ -1478,15 +939,12 @@ merge_HRdict_counts2<-merge_HRdict_counts %>%
 merge_HRdict_counts2$Region<-factor(merge_HRdict_counts2$Region, labels=c("East Asia and Pacific","Europe and Central Asia", "Latin America and Caribbean", "Middle East and North Africa","North America","South Asia","Sub-Saharan Africa" ),levels=c("eap","eca","lac","mena","na","sa","ssa"))
 ggplot(merge_HRdict_counts2,aes(x=Year,y=HR, color=Region))+
   geom_line()
-
-
 #hhrr pts 1-3
 merge_HRdict_counts3<-merge_HRdict_counts %>% 
                       subset(PTS_A<4) %>% 
                       group_by(Region,Year) %>%
                       summarise_at("HHRR",funs(mean(., na.rm=TRUE)))
 merge_HRdict_counts3$Region<-factor(merge_HRdict_counts3$Region, labels=c("East Asia and Pacific","Europe and Central Asia", "Latin America and Caribbean", "Middle East and North Africa","North America","South Asia","Sub-Saharan Africa" ),levels=c("eap","eca","lac","mena","na","sa","ssa"))
-
 g_merge_HRdict_counts3<-ggplot(merge_HRdict_counts3,aes(x=Year,y=HHRR,color=Region))+
 geom_line()+
   scale_y_continuous(limits = c(0, 20), breaks=seq(0,20,5),expand = c(0, 0))+
@@ -1512,16 +970,12 @@ labs(title="Average count of words related to Human Rights in UN speeches",
         legend.justification = "center",
         legend.spacing = unit(5.0, 'cm'),
         legend.text=element_text(size=10))
-
-
-
 #hhrr pts =4&5
 merge_HRdict_counts31<-merge_HRdict_counts %>% 
                       subset(PTS_A>3) %>% 
                       group_by(Region,Year) %>%
                       summarise_at("HHRR",funs(mean(., na.rm=TRUE)))
 merge_HRdict_counts31$Region<-factor(merge_HRdict_counts31$Region, labels=c("East Asia and Pacific","Europe and Central Asia", "Latin America and Caribbean", "Middle East and North Africa","North America","South Asia","Sub-Saharan Africa" ),levels=c("eap","eca","lac","mena","na","sa","ssa"))
-
 g_merge_HRdict_counts31<-ggplot(merge_HRdict_counts31,aes(x=Year,y=HHRR,color=Region))+
 geom_line()+
   scale_y_continuous(limits = c(0, 20), breaks=seq(0,20,5),expand = c(0, 0))+
@@ -1547,15 +1001,12 @@ labs(title="Average count of words related to Human Rights in UN speeches",
         legend.justification = "center",
         legend.spacing = unit(5.0, 'cm'),
         legend.text=element_text(size=10))
-
-
 #hr pts =1-3
 merge_HRdict_counts4<-merge_HRdict_counts %>% 
                       subset(PTS_A<4) %>% 
                       group_by(Region,Year) %>%
                       summarise_at("HR",funs(mean(., na.rm=TRUE)))
 merge_HRdict_counts4$Region<-factor(merge_HRdict_counts4$Region, labels=c("East Asia and Pacific","Europe and Central Asia", "Latin America and Caribbean", "Middle East and North Africa","North America","South Asia","Sub-Saharan Africa" ),levels=c("eap","eca","lac","mena","na","sa","ssa"))
-
 g_merge_HRdict_counts4<-ggplot(merge_HRdict_counts4,aes(x=Year,y=HR,color=Region))+
   geom_line()+
   scale_y_continuous(limits = c(0, 140), breaks=seq(0,140,35),expand = c(0, 0))+
@@ -1581,14 +1032,12 @@ labs(title="Average count of words related to Human Rights in UN speeches",
         legend.justification = "center",
         legend.spacing = unit(5.0, 'cm'),
         legend.text=element_text(size=10))
-
 #hr pts =4&5
 merge_HRdict_counts41<-merge_HRdict_counts %>% 
                       subset(PTS_A>3) %>% 
                       group_by(Region,Year) %>%
                       summarise_at("HR",funs(mean(., na.rm=TRUE)))
 merge_HRdict_counts41$Region<-factor(merge_HRdict_counts41$Region, labels=c("East Asia and Pacific","Europe and Central Asia", "Latin America and Caribbean", "Middle East and North Africa","North America","South Asia","Sub-Saharan Africa" ),levels=c("eap","eca","lac","mena","na","sa","ssa"))
-
 g_merge_HRdict_counts41<-ggplot(merge_HRdict_counts41,aes(x=Year,y=HR,color=Region))+
   geom_line()+
   scale_y_continuous(limits = c(0, 140), breaks=seq(0,140,35),expand = c(0, 0))+
@@ -1614,27 +1063,19 @@ labs(title="Average count of words related to Human Rights in UN speeches",
         legend.justification = "center",
         legend.spacing = unit(5.0, 'cm'),
         legend.text=element_text(size=10))
-
-
 merge_HRdict_counts5<-merge_HRdict_counts %>% 
                       subset(PTS_S>3) %>% 
                       group_by(Year) %>%
                       summarise_at("HR",funs(mean(., na.rm=TRUE)))
-
 merge_HRdict_counts51<-merge_HRdict_counts %>% 
                       subset(PTS_S<4) %>% 
                       group_by(Year) %>%
                       summarise_at("HR",funs(mean(., na.rm=TRUE)))
-
-
 ggplot(NULL,aes(x=Year,y=HR))+
     geom_line(data=merge_HRdict_counts51, color="green")+
   geom_line(data=merge_HRdict_counts5)
-
 summary(merge_HRdict_counts5)
 summary(merge_HRdict_counts51)
-
-
 ```
 
 
@@ -1642,52 +1083,38 @@ summary(merge_HRdict_counts51)
 ```{r}
 merge_HHRRcounts$PTS_S_dummy <- factor(merge_HHRRcounts$PTS_S)
 is.factor(merge_HHRRcounts$PTS_S_dummy)
-
 merge_HHRRcounts$PTS_A_dummy <- factor(merge_HHRRcounts$PTS_A)
 is.factor(merge_HHRRcounts$PTS_A_dummy)
-
 merge_HHRRcounts$PTS_H_dummy <- factor(merge_HHRRcounts$PTS_H)
 is.factor(merge_HHRRcounts$PTS_H_dummy)
-
 ModelHHRR_S <- lm (HHRR ~ PTS_S_dummy + factor(PTS_S_var) + PTS_S_dummy*factor(PTS_S_var), data = merge_HHRRcounts)
 screenreg(ModelHHRR_S)
 #PTS_S significant and negative
-
 ModelHHRR_A <- lm (HHRR ~ factor(PTS_A) + PTS_A_var + factor(PTS_A)*PTS_A_var, data = merge_HHRRcounts)
 screenreg(ModelHHRR_A)
-
 ModelHHRR_A <- lm (HHRR ~ factor(PTS_A) + factor(PTS_A_var) + factor(PTS_A)*factor(PTS_A_var), data = merge_HHRRcounts)
-
 names(merge_HHRRcounts)
 #PTS_A significant and negative
-
 ModelHHRR_H <- lm (HHRR ~ PTS_H_dummy + factor(PTS_H_var) + PTS_H_dummy*factor(PTS_H_var), data = merge_HHRRcounts)
 screenreg(ModelHHRR_H)
 summary(ModelHHRR_S)
 #PTS_H insignificant
-
-
-
 ```
 
 
 ```{r}
 #regression with fixed effects
-#install.packages("plm")
+install.packages("plm")
 library(plm)
 str(merge_HHRRcounts)
-
 ModelHHRR_S_fe <- plm (HHRR ~ PTS_S_dummy + factor(PTS_S_var) + PTS_S_dummy*factor(PTS_S_var), data = merge_HHRRcounts, index = c("MergeCountry", "Year"), effect = "twoways", model = "within")
 screenreg(ModelHHRR_S_fe)
 summary(ModelHHRR_S_fe)
-
 #resulting duplicate couples
-#table(index(merge_HHRRcounts), useNA = "ifany")
-
+table(index(merge_HHRRcounts), useNA = "ifany")
 #PTS_S significant and negative
 ModelHHRR_A_fe <- plm (HHRR ~ PTS_A_dummy + factor(PTS_A_var) + PTS_A_dummy*factor(PTS_A_var), data = merge_HHRRcounts, effect = "twoways", model = "within")
 screenreg(ModelHHRR_A_fe)
-
 #PTS_A significant and negative
 ModelHHRR_H_fe <- plm (HHRR ~ PTS_H_dummy + factor(PTS_H_var) + PTS_H_dummy*factor(PTS_H_var), data = merge_HHRRcounts, effect = "twoways", model = "within")
 screenreg(ModelHHRR_H_fe)
@@ -1696,25 +1123,17 @@ screenreg(ModelHHRR_H_fe)
 
 
 ```{r}
-
 ModelHHRR_A <- lm (HHRR ~ factor(PTS_A) + factor(PTS_A_var) + factor(PTS_A)*factor(PTS_A_var), data = merge_HHRRcounts)
-
 ModelHRdict_A <- lm (HR ~ factor(PTS_A) + factor(PTS_A_var) + factor(PTS_A)*factor(PTS_A_var), data = merge_HRdict_counts)
-screenreg(ModelHRdict_A)
+screenreg(ModelHRdict_A_feHHRR)
 names(ModelHRdict_A_fe)
-
-
 ModelHRdict_A_feHR <- plm (HR ~ factor(PTS_A) + PTS_A_var + factor(PTS_A)*PTS_A_var, data = merge_HRdict_counts, effect = "twoway", model = "within")
-
 ModelHRdict_A_feHHRR <- plm (HHRR ~ factor(PTS_A) + PTS_A_var + factor(PTS_A)*PTS_A_var, data = merge_HRdict_counts, effect = "twoway", model = "within")
-
 ```
 
 
 ```{r}
-
 ModelHR_A <- lm (HR ~ factor(PTS_A) + PTS_A_var + factor(PTS_A)*PTS_A_var, data = merge_HRdict_counts)
-
 stargazer(ModelHR_A, ModelHRdict_A_feHR, ModelHHRR_A, ModelHRdict_A_feHHRR,
           align=TRUE,
           type = 'latex',
@@ -1722,6 +1141,23 @@ stargazer(ModelHR_A, ModelHRdict_A_feHR, ModelHHRR_A, ModelHRdict_A_feHHRR,
           omit.stat=c("LL","ser","f","adj.rsq"),
           title= "OLS and two-way fixed effects models-Effect PTS AI on HR mentions",
           covariate.labels = c("PTS=2", "PTS=3","PTS=4","PTS=5","VPTS","PTS=2*VPTS", "PTS=3*VPTS","PTS=4*VPTS","", "Constant"))
+          
+          
+library(stargazer)
+stargazer(ModelHHRR_S, ModelHHRR_A, ModelHHRR_H,
+          align=TRUE,
+          type = 'text',
+          covariate.labels = c("a","s","d","f","g","h","j","k"),
+          column.sep.width = "10pt",
+          title= "Table 1. OLS regression - Effect of Barcenas scandal on trust in police",
+          dep.var.labels = "Trust in Police")
+          model.names = FALSE, 
+          column.labels = c("Amnesty International", "State Department","Human Rights Watch"),
+          model.numbers = FALSE,
+          omit.stat=c("LL","ser","f","adj.rsq"	),
+          star.char = c("*","**","***"),
+          star.cutoffs = c(0.05,0.01,0.001),
+          covariate.labels = c("D (Exposure to the Bárcenas scandal)", "Constant"))
 ```
 
 ###Topic Modeling
@@ -1729,51 +1165,61 @@ stargazer(ModelHR_A, ModelHRdict_A_feHR, ModelHHRR_A, ModelHRdict_A_feHHRR,
 #CREATE DFM
 UNGDdfm <- dfm(clean_ungd_corpus, remove = stopwords("english"), verbose = TRUE, 
                remove_punct = TRUE, remove_numbers = TRUE)
-
 UNGDtrim <- dfm_trim(UNGDdfm, min_docfreq = 2)
-
 #LDA with K TOPICS
 K <- 5
 lda <- LDA(UNGDtrim, k = K, method = "Gibbs", 
            control = list(verbose=25L, seed = 123, burnin = 100, iter = 500))
-
-
-
 #PREDICT TOPICS
 terms <- get_terms(lda, 15)
 terms[,1]
 topics <- get_topics(lda, 1)
 head(topics)
 topics
-
+str(clean_PTS_ungd1976)
+str(terms)
+# Topic 2
+topic2 <- paste(terms[,2], collapse=", ")
+sample(clean_PTS_ungd1976$text[topics==2], 1)
+topic2
+?textplot_wordcloud
+# Topic 3
+paste(terms[,3], collapse=", ")
+sample(clean_PTS_UNGD1976[topics==3], 1)
+# Topic 2
+paste(terms[,2], collapse=", ")
+sample(nyt$lead_paragraph[topics==2], 1)
+# add predicted topic to dataset
+nyt$pred_topic <- topics
+nyt$year <- substr(nyt$datetime, 1, 4) # extract year
+ # frequency table with articles about stock market, per year
+tab <- table(nyt$year[nyt$pred_topic==2])
+plot(tab)
+round(lda@gamma[1,], 2)
 #Topic 1
 paste(terms[,1], collapse=", ")
 # add probability to df
 clean_PTS_ungd1976$prob_topic1 <- lda@gamma[,1]
 # now aggregate at the year level
 agg1 <- aggregate(clean_PTS_ungd1976$prob_topic1, by=list(Year=clean_PTS_ungd1976$Year), FUN=mean)
-
 # Topic 2
 paste(terms[,2], collapse=", ")
 # add probability to df
 clean_PTS_ungd1976$prob_topic2 <- lda@gamma[,2]
 # now aggregate at the year level
 agg2 <- aggregate(clean_PTS_ungd1976$prob_topic2, by=list(Year=clean_PTS_ungd1976$Year), FUN=mean)
-
 # Topic 3
 paste(terms[,3], collapse=", ")
 # add probability to df
 clean_PTS_ungd1976$prob_topic3 <- lda@gamma[,3]
 # now aggregate at the year level
 agg3 <- aggregate(clean_PTS_ungd1976$prob_topic3, by=list(Year=clean_PTS_ungd1976$Year), FUN=mean)
-
 # Topic 4
 paste(terms[,4], collapse=", ")
 # add probability to df
 clean_PTS_ungd1976$prob_topic4 <- lda@gamma[,4]
 # now aggregate at the year level
 agg4 <- aggregate(clean_PTS_ungd1976$prob_topic4, by=list(Year=clean_PTS_ungd1976$Year), FUN=mean)
-
 # Topic 5
 paste(terms[,5], collapse=", ")
 # add probability to df
@@ -1790,7 +1236,6 @@ agg<-pivot_longer(agg,-Year,names_to="x",values_to ="values")
 agg$x<-factor(agg$x)
 levels(agg$x)
 levels(agg$x) <- c("Security in the Middle-East", "Security in Africa", "Global Climate","Human Rights","Not Specific")
-
 ggplot(agg, aes(x=Year, y=values, group=x)) + 
         geom_line(aes(colour=x), size =1) +
         scale_x_continuous(limits=c(1976,2020),breaks=seq(1976,2018,12),expand = c(0, 0))+
@@ -1814,7 +1259,4 @@ ggplot(agg, aes(x=Year, y=values, group=x)) +
               plot.caption = element_text(size = 8,hjust = 0,margin=margin(t=10)),
               legend.position = "none")+
         facet_wrap(~x, ncol=3)
-
-```
->>>>>>> Branch-2
-
+  ```
