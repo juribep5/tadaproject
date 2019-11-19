@@ -631,7 +631,6 @@ sentiment_plotn <-
   inner_join(get_sentiments("bing")) %>% 
   filter(sentiment == "negative") %>%
   count(Year, MergeCountry, sentiment)
-library(ggplot2)
 #positive emotions UN speeches - bing
 sentiment_plotp <-
   sent_words_lim %>%
@@ -724,7 +723,6 @@ head(merge_sentiment_counts3)
 #graphs on dataset 
 
 ```{r}
-summary(merge_sentiment3$PTS_S_var)
 ggplot(merge_sentiment_counts1, aes(x=as.numeric(PTS_S_var), y=n_bing))+
   geom_jitter(color="red")+
   theme_minimal()+
@@ -818,9 +816,6 @@ is.factor(merge_sentiment_counts3$PTS_A_dummy)
 ###regressions bing - baseline in sentiment analysis
 
 ```{r}
-###packages
-install.packages ("plm")
-library(plm)
 ###positive bing 
 Modelbing_S_pos <- plm (n_bing ~ PTS_S_dummy + PTS_S_var + PTS_S_dummy*PTS_S_var, data = subset(merge_sentiment_counts1, sentiment_bing == "positive"), , na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelbing_S_pos)
@@ -1104,8 +1099,6 @@ summary(ModelHHRR_S)
 
 ```{r}
 #regression with fixed effects
-install.packages("plm")
-library(plm)
 str(merge_HHRRcounts)
 ModelHHRR_S_fe <- plm (HHRR ~ PTS_S_dummy + factor(PTS_S_var) + PTS_S_dummy*factor(PTS_S_var), data = merge_HHRRcounts, index = c("MergeCountry", "Year"), effect = "twoways", model = "within")
 screenreg(ModelHHRR_S_fe)
@@ -1143,7 +1136,6 @@ stargazer(ModelHR_A, ModelHRdict_A_feHR, ModelHHRR_A, ModelHRdict_A_feHHRR,
           covariate.labels = c("PTS=2", "PTS=3","PTS=4","PTS=5","VPTS","PTS=2*VPTS", "PTS=3*VPTS","PTS=4*VPTS","", "Constant"))
           
           
-library(stargazer)
 stargazer(ModelHHRR_S, ModelHHRR_A, ModelHHRR_H,
           align=TRUE,
           type = 'text',
