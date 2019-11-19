@@ -375,6 +375,208 @@ HRdict_total <- dictionary(list(human_rights_total = c("kill", "forc", "arm", "g
 #Dictionary Analysis HR binary
 ## 1. Identifying the frequency of usage of "Human Rights" in UN Speeches
 
+##################################################################
+#Dictionary Analysis HR binary
+## 1. Identifying the frequency of usage of "Human Rights" in UN Speeches
+
+Creating compound tokens from the "Human Rights" concept:
+
+```{r}
+listHHRR <- list( c("Human", "Rights")) 
+```
+
+```{r}
+compound_UNGD_HHRR <- tokens_compound(lower_UNGD, listHHRR, valuetype = "fixed", concatenator = "_")
+```
+
+Creating a Dictionary of Human Rights, in order to identify the frequency of the concept in UNGD Speeches:
+
+```{r}
+HHRR_dict <- dictionary(list(Human.Rights=c("Human Rights")))
+```
+
+## Look up Human Rights term counts
+
+Looking up and counting the frequency of usage of "Human Rights" in the UN GA speeches.
+
+--> Apply a dictionary (HHRR) to a dfm by looking up all dfm features for matches in a a set of dictionary values.
+
+```{r}
+dfm_UNGD_HHRR <- dfm(compound_UNGD_HHRR)
+HHRR_dfm <- dfm_lookup(dfm_UNGD_HHRR, HHRR_dict, valuetype = "fixed")
+```
+
+Data Frame of human rights variables in UNGDC
+
+```{r}
+#creating a data frame 
+Human.Rights_HHRR <- convert(HHRR_dfm, to = "data.frame")
+#converting documentID into two columns - country and year
+HHRR_counts <- Human.Rights_HHRR %>%
+  separate(document, c("country", "year"), "_")
+#year as numeric
+HHRR_counts$year <- as.numeric(HHRR_counts$year)
+HHRR_counts <- plyr::rename(HHRR_counts, c("Human.Rights"="HHRR"))
+```
+
+
+```{r}
+#Merge HHRR counts with the MergeNA_PTS_ungd_1976 data set
+colnames(HHRR_counts)[colnames(HHRR_counts)=="country"] <- "MergeCountry"
+colnames(HHRR_counts)[colnames(HHRR_counts)=="year"] <- "Year"
+colnames(clean_PTS_ungd1976)[colnames(clean_PTS_ungd1976)=="MergeCountry"] <- "MergeCountry"
+clean_PTS_ungd1976 %>%
+      group_by(MergeCountry) %>%
+      summarise(n = n())
+HHRR_counts %>%
+      group_by(MergeCountry) %>%
+      summarise(n = n())
+merge_HHRRcounts <- merge(clean_PTS_ungd1976, HHRR_counts, by = c('MergeCountry','Year'), all=TRUE)
+```
+
+Ploting mentions HR by region
+
+```{r}
+#HHRR
+merge_HHRRcounts1<-merge_HHRRcounts %>% 
+                      subset(!is.na(Region)) %>% 
+                      group_by(Region,Year) %>%
+                      summarise_at("HHRR",funs(mean(., na.rm=TRUE)))
+
+merge_HHRRcounts1$Region<-factor(merge_HHRRcounts1$Region, labels=c("East Asia and Pacific","Europe and Central Asia", "Latin America and Caribbean", "Middle East and North Africa","North America","South Asia","Sub-Saharan Africa" ),levels=c("eap","eca","lac","mena","na","sa","ssa"))
+levels(merge_HHRRcounts1$Region)
+ggplot(merge_HHRRcounts1,aes(x=Year,y=HHRR, color=Region))+
+  geom_line() +labs(title="Mentions of Human Rights in UNGD speeches per region", x="Year", y="Mentions of Human Rights")
+
+```
+
+#Baseline
+
+## Model 1. Relation between changes in PTS and mentions of the "Human Rights" concept in UNGD speeches
+
+Linear regression model between changes in PTS (State Department) and mentions of the "Human Rights" concept in UNGD speeches (1976 - 2018)
+
+```{r}
+ModelHHRR_S <- lm (HHRR ~ factor(PTS_S) + PTS_S_var + factor(PTS_S)*PTS_S_var, data = merge_HHRRcounts)
+#PTS_S significant and negative, but the change in the PTS is not significant nor the interaction
+
+ModelHHRR_A <- lm (HHRR ~ factor(PTS_A) + PTS_A_var + factor(PTS_A)*PTS_A_var, data = merge_HHRRcounts)
+#PTS_A significant and negative, but the change in the PTS is not significant nor the interaction
+
+ModelHHRR_H <- lm (HHRR ~ PTS_H^2 + PTS_H_var + PTS_H*PTS_H_var, data = merge_HHRRcounts)
+#PTS_H insignificant
+
+screenreg(ModelHHRR_A)
+```
+
+#Fixed Effects
+
+```{r}
+ModelHHRR_S_fe <- plm (HHRR ~ factor(PTS_S) + PTS_S_var + factor(PTS_S)*PTS_S_var, data = merge_HHRRcounts, index = c("MergeCountry", "Year"), effect = "twoways", model = "within")
+
+ModelHHRR_A_fe <- plm (HHRR ~ factor(PTS_A) + PTS_A_var + factor(PTS_A)*PTS_A_var, data = merge_HHRRcounts, index = c("MergeCountry", "Year"), effect = "twoways", model = "within")
+
+screenreg(list(ModelHHRR_A_fe, ModelHHRR_A))
+```
+
+
+### Ploting the regression of mentions of HHRR and PTS score
+
+Converting PTS_A in a categorical variable
+```{r}
+plot_HHRR <- merge_HHRRcounts
+
+plot_HHRR$PTS_A <- factor(plot_HHRR$PTS_A, labels = c("1 PTS", "2 PTS", "3 PTS", "4 PTS", "5 PTS"), levels= c(1,2,3,4,5))
+```
+
+```{r}
+plot_HHRR <- subset(plot_HHRR, !is.na(plot_HHRR$PTS_A))
+```
+
+Plot the counts in HHRR mentions and the change in PTS by PTS score level
+```{r}
+ggplot(plot_HHRR, aes(x=HHRR, y=PTS_A_ch)) +
+  geom_point()
+```
+
+```{r}
+plot_HHRR <- subset(plot_HHRR, !is.na(plot_HHRR$PTS_A))
+```
+
+```{r}
+ggplot(plot_HHRR, aes(x=HHRR, y=PTS_A_ch, color=PTS_A)) +
+  geom_point() + labs(title="Mentions of Human Rights and changes in the PTS", x="Mentions of Human Rights", y="Changes in the PTS", color= "PTS score")
+```
+
+##### Scatterplot-box -- There is no significant change in the mentions of "Human Rights" for countries that change their levels of PTS - There are 2 outliers in change 0, PTS 1. That have significantly high mentions.
+
+```{r}
+aaa_HHRR<-ggplot(subset(plot_HHRR,!is.na(PTS_A_var)), aes(factor(PTS_A), HHRR))+
+  geom_boxplot(varwidth=T, aes(fill=factor(PTS_A_var)))+
+scale_fill_discrete(name = "Change in PTS Score", labels=c("No","Yes"))+
+          labs(title="Human Rights Mentions by PTS Score", 
+             subtitle="Baseline", 
+             caption="", 
+             y="Human Rights Mentions",
+             x="PTS Score - Amnesty International")+
+        theme(axis.line = element_blank(),
+              panel.grid.major = element_line(colour = 'gray',size=0.2),
+              panel.grid.minor = element_blank(),
+              panel.border = element_blank(),
+              panel.background = element_blank(),
+              plot.title = element_text(size = 16,hjust = 0.5),
+              plot.subtitle = element_text(size = 12,hjust = 0.5),
+              axis.title.x = element_text(size = 12),
+              axis.line.x = element_line(color = "gray40", size = 0.5),
+              axis.line.y = element_line(color = "gray40", size = 0.5),
+              axis.title.y = element_text(size = 12),
+              plot.caption = element_text(size = 8,hjust = 0,margin=margin(t=10)),
+              legend.position = "bottom")
+
+
+```
+
+###Model Regression with sophisticated human rights dictionary
+### Create Human Rights Dictionary
+
+```{r}
+#create human rights lists from the three sources
+HRlistFariss <- list( c("kill"), c("forc"), c("arm"), c("group"), c("civilian"), c("human"), c("secur"), c("disappear"), c("attack"), c("execut") , c("tortur"), c("member"), c("includ"), c("arrest"), c("prison"), c("polit"), c("amnesti"), c("trial"), c("releas"), c("imprison"), c("sentenc"), c("charg"), c("conscience"), c("polic"), c("offic"), c("illtreat"), c("death"), c("court"), c("alleg"), c("law"), c("service"), c("concern"), c("appeal"), c("servic"), c("committee"),    c("militari"), c("area"), c("continu"), c("section"), c("state"), c("dure"), c("arrest"), c("accord"), c("offici"), c("presid"), c("opposit"), c("howev"), c("parti"), c("author"), c("law"), c("provid"), c("gener"), c("public"), c("constitut"), c("employ"), c("women"), c("right"), c("respect"), c("freedom"), c("prohibit"), c("case"), c("ngo"), c("tortur"), c("gener"), c("labor"), c("detain"), c("releas"), c("elect"), c("local"), c("presidenti"), c("region"), c("mani"), c("regim"), c("nation"), c("ethnic"), c("union"), c("practic"), c("work"), c("foreign"), c("children"), c("investig"), c("relig"), c("islam"), c("roma"), c("worker"), c("traffic"), c("feder"), c("parliament"))
+HRlistGreene <- list(c("committed"), c("victims"), c("populations"), c("scale"), c("armed"), c("army"), c("commanders"), c("conscripted"), c("assassinations"), c("massacres"), c("internally", "displaced"), c("food"), c("humanitarian"), c("landmines"), c("money"), c("raped"), c("disappearances"), c("frequently"), c("numerous"), c("widespread"), c("common"), c("regularly"), c("routinely"), c("systematic"), c("extensive"))
+HRlistWatanabe <- list(c("human", "rights"), c("violat"), c("race"), c("dignit"), c("protect"), c("citizen"), c("educat"), c("child"), c("refugee"), c("communit"), c("people"), c("responsibl"), c("health"), c("world"))
+HRlist <- do.call(c, list(HRlistFariss, HRlistGreene, HRlistWatanabe))
+#summary(HRlist)
+```
+
+Creating compound tokens from the "Human Rights" concept:
+
+```{r}
+compound_UNGD_HRlist <- tokens_compound(lower_UNGD, HRlist, valuetype = "fixed", concatenator = "_")
+#compound_UNGD_HRlist
+```
+
+#create dictionaries from the three sources
+
+```{r}
+dict_HRFariss <- dictionary(list(human_rightsF = c("kill", "forc", "arm", "group", "civilian", "human", "secur", "disappear", "attack", "execut" , "tortur", "member", "includ", "arrest", "prison", "polit", "amnesti", "trial", "releas", "imprison", "sentenc", "charg", "conscience", "polic", "offic", "illtreat", "death", "court", "alleg", "law", "service", "concern", "appeal", "servic", "committee", "militari", "area", "continu", "section", "state", "dure", "arrest", "offici", "presid", "opposit", "parti", "author", "law", "provid", "gener", "public", "constitut", "employ", "women", "right", "respect", "freedom", "prohibit", "case", "ngo", "tortur", "gener", "labor", "detain", "releas", "elect", "local", "presidenti", "region", "mani", "regim", "nation", "ethnic", "union", "practic", "work", "foreign", "children", "investig", "relig", "islam", "roma", "worker", "traffic", "feder", "parliament")))
+dict_HRGreene <- dictionary(list(human_rightsG = c("commit", "victim", "popul", "scale", "armi", "command", "conscript", "assassin", "massacr", "intern_displac", "food", "humanitarian", "landmin", "money", "rape", "disappear", "widespread", "systemat", "extens")))
+#checking the stemmed version of dict_HRGreene
+char_HRGreene <- as.character(dict_HRGreene)
+toks_HRGreene <- tokens(char_HRGreene)
+toks_HRGreene
+remove_HRGreene <- tokens(toks_HRGreene, remove_punct = TRUE)
+remove_HRGreene
+tokens_wordstem(remove_HRGreene)
+dict_HRWatanabe <- dictionary(list(human_rightsW = c("human_rights", "violat", "race", "dignit", "protect", "citizen", "educat", "child", "refugee", "communit", "people", "responsibl", "health", "world")))
+#combine the dictionaries
+HRdict <- c(dict_HRGreene["human_rightsG"], dict_HRFariss["human_rightsF"], dict_HRWatanabe["human_rightsW"])
+#one complete dictionary
+HRdict_total <- dictionary(list(human_rights_total = c("kill", "forc", "arm", "group", "civilian", "human", "secur", "disappear", "attack", "execut" , "tortur", "member", "includ", "arrest", "prison", "polit", "amnesti", "trial", "releas", "imprison", "sentenc", "charg", "conscience", "polic", "offic", "illtreat", "death", "court", "alleg", "law", "service", "concern", "appeal", "servic", "committee", "militari", "area", "continu", "section", "state", "dure", "arrest", "offici", "presid", "opposit", "parti", "author", "law", "provid", "gener", "public", "constitut", "employ", "women", "right", "respect", "freedom", "prohibit", "case", "ngo", "tortur", "gener", "labor", "detain", "releas", "elect", "local", "presidenti", "region", "mani", "regim", "nation", "ethnic", "union", "practic", "work", "foreign", "children", "investig", "relig", "islam", "roma", "worker", "traffic", "feder", "parliament", "commit", "victim", "popul", "scale", "armi", "command", "conscript", "assassin", "massacr", "intern_displac", "food", "humanitarian", "landmin", "money", "rape", "disappear", "widespread", "systemat", "extens", "human_rights", "violat", "race", "dignit", "protect", "citizen", "educat", "child", "refugee", "communit", "people", "responsibl", "health", "world")))
+```
+
+#Dictionary Analysis HR binary
+## 1. Identifying the frequency of usage of "Human Rights" in UN Speeches
+
 ```{r}
 HRdict
 HRdict_total
@@ -446,14 +648,16 @@ ggplot(merge_HRdict_counts1,aes(x=Year,y=HHRR, color=Region))+
 Linear regression model between changes in PTS (Amnesty International) and mentions of the "Human Rights" -related concepts in UNGD speeches (1976 - 2018)
 
 ```{r}
-ModelHRdict_S <- lm (HR ~ PTS_S + PTS_S_ch + PTS_S*PTS_S_ch, data = merge_HRdict_counts)
+ModelHRdict_S <- lm (HR ~ PTS_S + PTS_S_var + PTS_S*PTS_S_var, data = merge_HRdict_counts)
+
 ModelHRdict_A <- lm (HR ~ factor(PTS_A) + PTS_A_var + factor(PTS_A)*PTS_A_var, data = merge_HRdict_counts)
-ModelHRdict_H <- lm (HR ~ PTS_H + PTS_H_ch + PTS_H*PTS_H_ch, data = merge_HRdict_counts)
+
+ModelHRdict_H <- lm (HR ~ PTS_H + PTS_H_var + PTS_H*PTS_H_var, data = merge_HRdict_counts)
 ```
 
 
 ```{r}
-screenreg(list(ModelHRdict_S, ModelHRdict_A, ModelHRdict_H))
+screenreg(ModelHRdict_A)
 ```
 
 
@@ -467,10 +671,11 @@ ModelHR_A_fe <- plm (HR ~ factor(PTS_A) + PTS_A_var + factor(PTS_A)*PTS_A_var, d
 ```{r}
 screenreg(list(ModelHRdict_A, ModelHR_A_fe))
 ```
+
+
 ### Ploting the regression of mentions of Human Rights related concepts and PTS score
 
 Converting PTS_S in a categorical variable
-
 ```{r}
 plot_HR.dict <- merge_HRdict_counts
 plot_HR.dict$PTS_A <- factor(plot_HR.dict$PTS_A, labels = c("1 PTS", "2 PTS", "3 PTS", "4 PTS", "5 PTS"), levels= c(1,2,3,4,5))
@@ -482,7 +687,7 @@ plot_HR.dict <- subset(plot_HR.dict, !is.na(plot_HR.dict$PTS_A))
 
 Plot the counts in HHRR mentions and the change in PTS by PTS score level
 ```{r}
-ggplot(plot_HR.dict, aes(x=HR, y=PTS_S_ch)) +
+ggplot(plot_HR.dict, aes(x=HR, y=PTS_A_var)) +
   geom_point()
 ```
 
@@ -491,20 +696,29 @@ ggplot(plot_HR.dict, aes(x=HR, y=PTS_A_ch, color=PTS_A)) +
   geom_point()
 ```
 
-There is no significant change in the mentions of Human Rights-related concepts for countries that change their levels of PTS - 
-
 ```{r}
 aaa.1<-ggplot(subset(plot_HR.dict,!is.na(PTS_A_var)), aes(PTS_A, HR))+
-  geom_boxplot(varwidth=T, aes(fill=factor(PTS_A_var)))
+  geom_boxplot(varwidth=T, aes(fill=factor(PTS_A_var)))+scale_fill_discrete(name = "Change in PTS Score", labels=c("No","Yes"))+
+          labs(title="Human Rights Mentions by PTS Score", 
+             subtitle="Sophisticated Dictionary", 
+             caption="", 
+             y="Human Rights Mentions",
+             x="PTS Score - Amnesty International")+
+        theme(axis.line = element_blank(),
+              panel.grid.major = element_line(colour = 'gray',size=0.2),
+              panel.grid.minor = element_blank(),
+              panel.border = element_blank(),
+              panel.background = element_blank(),
+              plot.title = element_text(size = 16,hjust = 0.5),
+              plot.subtitle = element_text(size = 12,hjust = 0.5),
+              axis.title.x = element_text(size = 12),
+              axis.line.x = element_line(color = "gray40", size = 0.5),
+              axis.line.y = element_line(color = "gray40", size = 0.5),
+              axis.title.y = element_text(size = 12),
+              plot.caption = element_text(size = 8,hjust = 0,margin=margin(t=10)),
+              legend.position = "bottom")
   
 ```
-
-
-```{r}
-bbb<- ggplot(subset(plot_HR.dict,!is.na(PTS_A_var)), aes(PTS_A))+
-    geom_density(aes(fill=factor(PTS_A_var)), alpha=0.2)
-```
-
 
 
 ### Analyzing mentions of HHRR as a binary variable
@@ -516,13 +730,16 @@ Converting HHRR mentions in the Binary Dictionary into a binary variable (1=the 
 ```{r}
 binary_HHRRcounts <- merge_HHRRcounts
 binary_HHRRcounts$HHRR <- as.factor(ifelse(binary_HHRRcounts$HHRR>1,1,0))
+
 summary(binary_HHRRcounts$HHRR)
 ```
 
 Running the Binary Model for the Amnesty PTS database
 ```{r}
-Binary_ModelHHRR_A <- glm (HHRR ~ PTS_A + PTS_A_ch + PTS_A*PTS_A_ch, family = binomial(link = "logit"), data = binary_HHRRcounts)
+Binary_ModelHHRR_A <- glm (HHRR ~ factor(PTS_A) + PTS_A_var + factor(PTS_A)*PTS_A_var, family = binomial(link = "logit"), data = binary_HHRRcounts)
+
 screenreg(Binary_ModelHHRR_A)
+
 #PTS_A significant and negative, but the change in the PTS is not significant nor the interaction
 ```
 
@@ -532,17 +749,18 @@ screenreg(list(ModelHHRR_A, Binary_ModelHHRR_A))
 
 ### Sophisticated HHRR Model
 
-Converting HHRR mentions in the Sophisticated HHRR Dictionary into a binary variable (1=the "Human Rights" related concepts are mentioned at least once in the speech; and 0= the concepts are not mentioned at all)
-
 ```{r}
 binary_HRdict_counts <- merge_HRdict_counts
+
 binary_HRdict_counts$HR <- as.factor(ifelse(binary_HRdict_counts$HR>1,1,0))
+
 summary(binary_HRdict_counts$HR)
 ```
 
-Running the Binary Model for the State Department PTS database
+Running the Binary Model for the Amnesty International PTS database
 ```{r}
-Binary_ModelHRdict_A <- glm (HR ~ PTS_A + PTS_A_ch + PTS_A*PTS_A_ch, family = binomial(link = "logit"), data = binary_HRdict_counts)
+Binary_ModelHRdict_A <- glm (HR ~ factor(PTS_A) + PTS_A_var + factor(PTS_A)*PTS_A_var, family = binomial(link = "logit"), data = binary_HRdict_counts)
+
 screenreg(Binary_ModelHRdict_A)
 ```
 
@@ -558,40 +776,69 @@ screenreg(list(ModelHHRR_A, ModelHRdict_A))
 ```{r}
 names(ModelHRdict_A)
 print(ModelHRdict_A$coefficients)
+
 a<-ModelHRdict_A$coefficients["(Intercept)"]
 ModelHRdict_A$coefficients[2]
 ModelHRdict_A$coefficients[3]
 ModelHRdict_A$coefficients[4]
-merge_HRdict_counts$regression<-ModelHRdict_A$coefficients["(Intercept)"]+ ModelHRdict_A$coefficients[2]*merge_HRdict_counts$PTS_A+ModelHRdict_A$coefficients[3]*merge_HRdict_counts$PTS_A_var+ModelHRdict_A$coefficients[4]*merge_HRdict_counts$PTS_A*merge_HRdict_counts$PTS_A_var
+
+merge_HRdict_counts$regression<-ModelHRdict_A$coefficients["(Intercept)"]+ ModelHRdict_A$coefficients[2]*merge_HRdict_counts$PTS_A^2+ModelHRdict_A$coefficients[3]*merge_HRdict_counts$PTS_A_var+ModelHRdict_A$coefficients[4]*merge_HRdict_counts$PTS_A*merge_HRdict_counts$PTS_A_var
 ```
 
 ```{r}
-prediction <-ggplot(merge_HRdict_counts,aes(year, MergeCountry)) + 
-  geom_line(aes(x=Year, y=HR, colour ="Real"))+
-  geom_line(aes(x=Year, y=regression, colour ="Regression"))+
-  scale_x_continuous(limits=c(1976,2018),breaks=seq(1976,2018,21),expand = c(0, 0))+
-    facet_wrap(~MergeCountry,ncol = 15) +
-        scale_color_discrete(name="Lines", labels = c("Real", "Regression"))+
-  labs(title="Human Rights Mentions per Country 1976-2018", 
-             subtitle="Model vs reality", 
-             caption="", 
-             y="Human Tights Mentions",
-             x="Year")+
-        theme(axis.line = element_blank(),
-              panel.grid.major = element_line(colour = 'gray',size=0.2),
-              panel.grid.minor = element_blank(),
-              panel.border = element_blank(),
-              panel.background = element_blank(),
-              plot.title = element_text(size = 16,hjust = 0.5),
-              plot.subtitle = element_text(size = 12,hjust = 0.5),
-              axis.title.x = element_text(size = 12),
-              axis.line.x = element_line(color = "gray40", size = 0.5),
-              axis.line.y = element_line(color = "gray40", size = 0.5),
-              axis.title.y = element_text(size = 12),
-              plot.caption = element_text(size = 8,hjust = 0,margin=margin(t=10)),
-              legend.position = "Bottom")
+prediction_model <- ggplot(merge_HRdict_counts,aes(year, MergeCountry)) + 
+scale_x_continuous(limits=c(1976,2018),breaks=seq(1976,2018,21),expand = c(0, 0))+
+  geom_line(aes(x=Year, y=HR, colour ="Mentions"))+
+  geom_line(aes(x=Year, y=regression))+
+    facet_wrap(~MergeCountry,ncol = 15) 
 ```
 
+```{r}
+prediction <- ggplot(subset(merge_HRdict_counts, MergeCountry=="USA")) + 
+scale_x_continuous(limits=c(1976,2018),breaks=seq(1976,2018,21),expand = c(0, 0))+
+  geom_line(aes(x=Year, y=HR, colour ="Mentions"))+
+  geom_line(aes(x=Year, y=regression))+
+    facet_wrap(~MergeCountry,ncol = 15) 
+```
+
+
+```{r}
+a<-merge_HRdict_counts %>%
+  subset(MergeCountry=="COL")
+str(a)
+
+```
+
+```{r}
+screenreg(list(ModelHHRR_A, ModelHRdict_A))
+```
+
+```{r}
+stargazer(ModelHHRR_A, ModelHHRR_A_fe, ModelHRdict_A, ModelHR_A_fe, align = TRUE,
+          column.sep.width = "1 pt",
+          title = "Table 4. Regresion Models Baseline and Sophisticated Dictionary Model",
+          covariate.labels = c("PTS 2", "PTS 3", "PTS 4", "PTS 5", "Variance in PTS", "Interaction PTS2 and VAR", "Interaction PTS3 and VAR", "Interaction PTS4 and VAR"),
+          dep.var.labels = c("Baseline","Sophisticated Dictionary"),
+          dep.var.caption = "",
+          model.names = FALSE,
+          model.numbers = FALSE,
+          column.labels = c("OLS", "Fixed Effects", "OLS", "Fixed Effects"),
+          star.cutoffs = c(0.05, 0.01, 0.001),
+          intercept.bottom = TRUE,
+          digits = 3,
+          digits.extra = 1,
+          omit.stat=c("LL","ser","f","adj.rsq"),
+          type = "latex")
+```
+
+
+### Evaluation
+
+##F test
+
+```{r}
+var.test(ModelHHRR_A, ModelHRdict_A)
+```
 
 ################################################################
 ###Hypothesis 2: sentiment dictionary analysis
