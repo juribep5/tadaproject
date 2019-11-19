@@ -817,27 +817,18 @@ is.factor(merge_sentiment_counts3$PTS_A_dummy)
 
 ```{r}
 ###positive bing 
-Modelbing_S_pos <- plm (n_bing ~ PTS_S_dummy + PTS_S_var + PTS_S_dummy*PTS_S_var, data = subset(merge_sentiment_counts1, sentiment_bing == "positive"), , na.action = na.exclude, effect = "twoways", model = "within")
-screenreg(Modelbing_S_pos)
+
 Modelbing_A_pos <- plm (n_bing ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts1, sentiment_bing == "positive"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelbing_A_pos)
-Modelbing_H <- plm (n_bing ~ PTS_H_dummy + PTS_H_var + PTS_H_dummy*PTS_H_var, data = subset(merge_sentiment_counts1, sentiment_bing == "positive"), effect = "twoways", model = "within")
-screenreg(Modelbing_H)
-#for A and S, only PTS dummies are significant, so a higher PTS leads to more positive sentiments in UNGDC speeches
+
 ###negative bing
-Modelbing_S_neg <- plm (n_bing ~ PTS_S_dummy + PTS_S_var + PTS_S_dummy*PTS_S_var, data = subset(merge_sentiment_counts1, sentiment_bing == "negative"), effect = "twoways", model = "within")
-screenreg(Modelbing_S_neg)
-#PTS leads to more negative sentiment in speeches
 Modelbing_A_neg <- plm (n_bing ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts1, sentiment_bing == "negative"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelbing_A_neg)
 #PTS leads to more negative sentiment in speeches
+
 ###regressions with sentiment in general
-Modelbing_S <- lm (n_bing ~ PTS_S_dummy + PTS_S_var + PTS_S_dummy*PTS_S_var, data = merge_sentiment_all)
-screenreg(Modelbing_S)
 Modelbing_A <- lm (n_bing ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, na.action = na.exclude, data = merge_sentiment_counts1)
 screenreg(Modelbing_A)
-Modelbing_H <- lm (n_bing ~ PTS_H_dummy + PTS_H_var + PTS_H_dummy*PTS_H_var, data = merge_sentiment_all)
-screenreg(Modelbing_H)
 #all coefficients significant, also in the interaction term
 ```
 #Sentiment Analysis Regression
@@ -847,10 +838,6 @@ screenreg(Modelbing_H)
 ###regressions afinn
 head(merge_sentiment_counts2,20)
 summary(merge_sentiment_counts2$sentiment_afinn)
-Modelafinn_S <- plm (sentiment_afinn ~ PTS_S_dummy + PTS_S_var + PTS_S_dummy*PTS_S_var, data = merge_sentiment_counts2, effect = "twoways", model = "within")
-screenreg(Modelafinn_S)
-#dummys PTS 4 and 5 are significant and negative, so sentiment becomes more negative if a country has a higher score
-#interaction between PTS2 and change is significant and negative
 Modelafinn_A <- plm (sentiment_afinn ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = merge_sentiment_counts2, na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelafinn_A)
 #only dummies significant and negative
@@ -861,31 +848,36 @@ screenreg(Modelafinn_A)
 #--> i need to group them by the sentiment of anger etc. in each of the windows...
 ##ANGER
 head(merge_sentiment_all$sentiment_nrc, 20)
-Modelnrc_S <- plm (n_nrc ~ PTS_S_dummy + PTS_S_var + PTS_S_dummy*PTS_S_var, data = subset(merge_sentiment_all, sentiment_nrc == "anger"), na.action = na.exclude, effect = "twoways", model = "within")
-screenreg(Modelnrc_S)
-#dummies positive significant: more anger talk, change alone is significant and negative, interaction with dummy 2 significant and positive 
 Modelnrc_anger <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "anger"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelnrc_anger)
+
 #dummies positive and significant
 Modelnrc_A_disgust <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "disgust"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelnrc_A_disgust)
 #significant
+
 Modelnrc_A_sadness <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "sadness"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelnrc_A_sadness)
+
 Modelnrc_A_fear <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "fear"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelnrc_A_fear)
 #interaction term positive and negative
 Modelnrc_A_negative <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "negative"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelnrc_A_negative)
+
 #positive categories
 Modelnrc_A_positive <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "positive"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelnrc_A_positive)
+
 Modelnrc_A_anticip <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "anticipation"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelnrc_A_anticip)
+
 Modelnrc_A_trust <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "trust"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelnrc_A_trust)
+
 Modelnrc_A_surprise <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "surprise"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelnrc_A_surprise)
+
 Modelnrc_A_joy <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "joy"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelnrc_A_joy)
 summary(merge_sentiment_counts3$sentiment_nrc)
