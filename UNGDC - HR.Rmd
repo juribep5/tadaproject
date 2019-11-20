@@ -1094,7 +1094,6 @@ screenreg(Modelafinn_A)
 ###regressions nrc
 #--> i need to group them by the sentiment of anger etc. in each of the windows...
 ##ANGER
-head(merge_sentiment_all$sentiment_nrc, 20)
 Modelnrc_anger <- plm (n_nrc ~ PTS_A_dummy + PTS_A_var + PTS_A_dummy*PTS_A_var, data = subset(merge_sentiment_counts3, sentiment_nrc == "anger"), na.action = na.exclude, effect = "twoways", model = "within")
 screenreg(Modelnrc_anger)
 
