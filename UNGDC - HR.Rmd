@@ -1395,11 +1395,6 @@ topic2
 paste(terms[,3], collapse=", ")
 # Topic 2
 paste(terms[,2], collapse=", ")
-# add predicted topic to dataset
-nyt$pred_topic <- topics
-nyt$year <- substr(nyt$datetime, 1, 4) # extract year
- # frequency table with articles about stock market, per year
-tab <- table(nyt$year[nyt$pred_topic==2])
 round(lda@gamma[1,], 2)
 #Topic 1
 paste(terms[,1], collapse=", ")
