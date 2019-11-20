@@ -1397,10 +1397,8 @@ topic2
 ?textplot_wordcloud
 # Topic 3
 paste(terms[,3], collapse=", ")
-sample(clean_PTS_UNGD1976[topics==3], 1)
 # Topic 2
 paste(terms[,2], collapse=", ")
-sample(nyt$lead_paragraph[topics==2], 1)
 # add predicted topic to dataset
 nyt$pred_topic <- topics
 nyt$year <- substr(nyt$datetime, 1, 4) # extract year
