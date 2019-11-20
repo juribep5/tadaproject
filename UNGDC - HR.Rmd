@@ -1356,8 +1356,6 @@ screenreg(ModelHHRR_H_fe)
 ```{r}
 ModelHHRR_A <- lm (HHRR ~ factor(PTS_A) + factor(PTS_A_var) + factor(PTS_A)*factor(PTS_A_var), data = merge_HHRRcounts)
 ModelHRdict_A <- lm (HR ~ factor(PTS_A) + factor(PTS_A_var) + factor(PTS_A)*factor(PTS_A_var), data = merge_HRdict_counts)
-screenreg(ModelHRdict_A_feHHRR)
-names(ModelHRdict_A_fe)
 ModelHRdict_A_feHR <- plm (HR ~ factor(PTS_A) + PTS_A_var + factor(PTS_A)*PTS_A_var, data = merge_HRdict_counts, effect = "twoway", model = "within")
 ModelHRdict_A_feHHRR <- plm (HHRR ~ factor(PTS_A) + PTS_A_var + factor(PTS_A)*PTS_A_var, data = merge_HRdict_counts, effect = "twoway", model = "within")
 ```
