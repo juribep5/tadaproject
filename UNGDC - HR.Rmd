@@ -1471,4 +1471,4 @@ ggplot(agg, aes(x=Year, y=values, group=x)) +
               plot.caption = element_text(size = 8,hjust = 0,margin=margin(t=10)),
               legend.position = "none")+
         facet_wrap(~x, ncol=3)
-  ```
+```
