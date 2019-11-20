@@ -1386,15 +1386,11 @@ lda <- LDA(UNGDtrim, k = K, method = "Gibbs",
 terms <- get_terms(lda, 15)
 terms[,1]
 topics <- get_topics(lda, 1)
-head(topics)
 topics
-str(clean_PTS_ungd1976)
-str(terms)
+
 # Topic 2
 topic2 <- paste(terms[,2], collapse=", ")
-sample(clean_PTS_ungd1976$text[topics==2], 1)
 topic2
-?textplot_wordcloud
 # Topic 3
 paste(terms[,3], collapse=", ")
 # Topic 2
@@ -1404,7 +1400,6 @@ nyt$pred_topic <- topics
 nyt$year <- substr(nyt$datetime, 1, 4) # extract year
  # frequency table with articles about stock market, per year
 tab <- table(nyt$year[nyt$pred_topic==2])
-plot(tab)
 round(lda@gamma[1,], 2)
 #Topic 1
 paste(terms[,1], collapse=", ")
