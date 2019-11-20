@@ -1370,22 +1370,6 @@ stargazer(ModelHR_A, ModelHRdict_A_feHR, ModelHHRR_A, ModelHRdict_A_feHHRR,
           omit.stat=c("LL","ser","f","adj.rsq"),
           title= "OLS and two-way fixed effects models-Effect PTS AI on HR mentions",
           covariate.labels = c("PTS=2", "PTS=3","PTS=4","PTS=5","VPTS","PTS=2*VPTS", "PTS=3*VPTS","PTS=4*VPTS","", "Constant"))
-          
-          
-stargazer(ModelHHRR_S, ModelHHRR_A, ModelHHRR_H,
-          align=TRUE,
-          type = 'text',
-          covariate.labels = c("a","s","d","f","g","h","j","k"),
-          column.sep.width = "10pt",
-          title= "Table 1. OLS regression - Effect of Barcenas scandal on trust in police",
-          dep.var.labels = "Trust in Police")
-          model.names = FALSE, 
-          column.labels = c("Amnesty International", "State Department","Human Rights Watch"),
-          model.numbers = FALSE,
-          omit.stat=c("LL","ser","f","adj.rsq"	),
-          star.char = c("*","**","***"),
-          star.cutoffs = c(0.05,0.01,0.001),
-          covariate.labels = c("D (Exposure to the Bárcenas scandal)", "Constant"))
 ```
 
 ###Topic Modeling
